@@ -54,6 +54,8 @@ uniform float uHalftone;
 uniform float uGrain;
 uniform float uVignette;
 uniform float uDesat;
+uniform float uShadeEdge;
+uniform float uShadeEdgeStrength;
 
 varying vec2 vUv;
 
@@ -117,19 +119,30 @@ void main() {
   float luma = dot(base, vec3(0.2126, 0.7152, 0.0722));
   base = mix(vec3(luma), base, uDesat);
 
-  // Halftone: a rotated dot grid that only bites in the darker tones, the way
-  // a printer would build up shadow with denser dots.
+  // Shadow-terminator ink. An album inks the boundary between lit and shaded
+  // sides of a form, not only its silhouette — and because the toon ramp makes
+  // that boundary a hard step, a luminance Sobel finds it exactly.
+  float lL = dot(texture2D(tColor, vUv - vec2(off.x, 0.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
+  float lR = dot(texture2D(tColor, vUv + vec2(off.x, 0.0)).rgb, vec3(0.2126, 0.7152, 0.0722));
+  float lU = dot(texture2D(tColor, vUv + vec2(0.0, off.y)).rgb, vec3(0.2126, 0.7152, 0.0722));
+  float lD = dot(texture2D(tColor, vUv - vec2(0.0, off.y)).rgb, vec3(0.2126, 0.7152, 0.0722));
+  float lumaDiff = abs(luma - lL) + abs(luma - lR) + abs(luma - lU) + abs(luma - lD);
+  float shadeEdge = step(uShadeEdge, lumaDiff) * step(dC, 0.9995) * uShadeEdgeStrength;
+
+  // Halftone: a rotated dot grid that only bites in the *darkest* tones, the
+  // way a printer builds up shadow. Letting it creep into the midtones puts a
+  // grey mush over the whole frame, which is worse than having none at all.
   float ang = 0.4363; // ~25°, classic screen angle
   vec2 rot = vec2(
     vUv.x * cos(ang) - vUv.y * sin(ang),
     vUv.x * sin(ang) + vUv.y * cos(ang)
-  ) * uResolution / 3.4;
+  ) * uResolution / 11.0;
   float dots = length(fract(rot) - 0.5);
-  float shade = smoothstep(0.55, 0.06, luma);
-  float screen = 1.0 - smoothstep(0.16, 0.34, dots) * shade * uHalftone;
+  float shade = smoothstep(0.3, 0.05, luma);
+  float screen = 1.0 - smoothstep(0.22, 0.46, dots) * shade * uHalftone;
   base *= mix(1.0, screen, uHalftone);
 
-  vec3 outColor = mix(base, uInk, edge);
+  vec3 outColor = mix(base, uInk, max(edge, shadeEdge));
 
   // Paper: a fixed fibre grain plus a per-step speckle.
   float fibre = hash21(vUv * uResolution * 0.5);
@@ -157,17 +170,22 @@ export interface ComicPassSettings {
   vignette: number;
   /** 1 = full colour, 0 = greyscale. Flashbacks run near zero. */
   saturation: number;
+  /** Luminance step that counts as a shadow terminator worth inking. */
+  shadeEdge: number;
+  shadeEdgeStrength: number;
 }
 
 export const COMIC_DEFAULTS: ComicPassSettings = {
-  thickness: 1.45,
-  depthEdge: 0.016,
-  normalEdge: 0.52,
-  boil: 0.85,
-  halftone: 0.55,
-  grain: 0.1,
-  vignette: 0.42,
+  thickness: 2.3,
+  depthEdge: 0.011,
+  normalEdge: 0.34,
+  boil: 0.7,
+  halftone: 0.4,
+  grain: 0.075,
+  vignette: 0.34,
   saturation: 1,
+  shadeEdge: 0.34,
+  shadeEdgeStrength: 0.9,
 };
 
 export class ComicPass {
@@ -211,6 +229,8 @@ export class ComicPass {
         uGrain: { value: COMIC_DEFAULTS.grain },
         uVignette: { value: COMIC_DEFAULTS.vignette },
         uDesat: { value: COMIC_DEFAULTS.saturation },
+        uShadeEdge: { value: COMIC_DEFAULTS.shadeEdge },
+        uShadeEdgeStrength: { value: COMIC_DEFAULTS.shadeEdgeStrength },
       },
     });
 
@@ -227,7 +247,6 @@ export class ComicPass {
 
   apply(settings: Partial<ComicPassSettings>): void {
     const u = this.material.uniforms;
-    if (settings.thickness !== undefined) u.uThickness!.value = settings.thickness;
     if (settings.depthEdge !== undefined) u.uDepthEdge!.value = settings.depthEdge;
     if (settings.normalEdge !== undefined) u.uNormalEdge!.value = settings.normalEdge;
     if (settings.boil !== undefined) u.uBoil!.value = settings.boil;
@@ -235,12 +254,32 @@ export class ComicPass {
     if (settings.grain !== undefined) u.uGrain!.value = settings.grain;
     if (settings.vignette !== undefined) u.uVignette!.value = settings.vignette;
     if (settings.saturation !== undefined) u.uDesat!.value = settings.saturation;
+    if (settings.shadeEdge !== undefined) u.uShadeEdge!.value = settings.shadeEdge;
+    if (settings.shadeEdgeStrength !== undefined) {
+      u.uShadeEdgeStrength!.value = settings.shadeEdgeStrength;
+    }
+    if (settings.thickness !== undefined) this.#thickness = settings.thickness;
+    this.#applyThickness(this.#height);
+  }
+
+  #thickness = COMIC_DEFAULTS.thickness;
+  #height = 1080;
+
+  /**
+   * Line weight is authored for a 1080p frame and scaled to whatever the buffer
+   * actually is. Without this the outline is hairline on a 4K monitor and a
+   * black smear at 50 % render scale.
+   */
+  #applyThickness(height: number): void {
+    this.material.uniforms.uThickness!.value = this.#thickness * (height / 1080);
   }
 
   setSize(width: number, height: number): void {
     const u = this.material.uniforms;
     (u.uTexel!.value as Vector2).set(1 / width, 1 / height);
     (u.uResolution!.value as Vector2).set(width, height);
+    this.#height = height;
+    this.#applyThickness(height);
   }
 
   setCameraRange(near: number, far: number): void {

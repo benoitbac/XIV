@@ -9,17 +9,20 @@ export const PALETTE = {
   ink: 0x141210,
   paper: 0xf2ece1,
 
-  snow: 0xe4ebf2,
-  snowShadow: 0xb9c7d6,
-  sky: 0x9dbdd6,
+  // Albedos are deliberately mid-tone. The key light and the toon ramp supply
+  // the brightness; starting from near-white leaves the ramp nowhere to go and
+  // every lit surface clips to the same flat white.
+  snow: 0xc2d2e0,
+  snowShadow: 0x8fa3b8,
+  sky: 0x6d94b8,
   skyNight: 0x2b3a52,
 
-  steel: 0x5c6672,
-  steelDark: 0x3a424c,
-  rust: 0x8d5433,
-  wood: 0x6d4e35,
-  woodDark: 0x4a3423,
-  concrete: 0x9a9186,
+  steel: 0x4e5763,
+  steelDark: 0x333a43,
+  rust: 0x7a4529,
+  wood: 0x5d4029,
+  woodDark: 0x3e2b1c,
+  concrete: 0x827a70,
 
   blood: 0xc4322a,
   alert: 0xd94a3d,

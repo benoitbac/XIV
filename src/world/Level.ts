@@ -7,14 +7,38 @@ import {
   Mesh,
   MeshToonMaterial,
   Object3D,
+  PointLight,
   Vector3,
 } from 'three';
 import { BrushWorld, type Surface } from './Collision.ts';
 import { PALETTE } from '../render/palette.ts';
-import { toon } from '../render/toon.ts';
+import { toon, type RampName } from '../render/toon.ts';
+import { scaleBoxUVs, type SurfaceTexture } from '../render/textures.ts';
 import { mulberry32 } from '../core/mathx.ts';
 import type { WeaponId } from '../player/weapons.ts';
 import type { SkySettings } from '../render/Stage.ts';
+
+/**
+ * Every surface kind gets a sensible texture and ramp by default, so a level
+ * author writes `'wood'` and gets boards, not a flat brown rectangle.
+ */
+const DEFAULT_TEXTURE: Record<Surface, SurfaceTexture | null> = {
+  snow: 'snow',
+  wood: 'plank',
+  metal: 'metal',
+  concrete: 'concrete',
+  glass: null,
+  flesh: null,
+};
+
+const DEFAULT_RAMP: Record<Surface, RampName> = {
+  snow: 'snow',
+  wood: 'duo',
+  metal: 'duo',
+  concrete: 'duo',
+  glass: 'flat',
+  flesh: 'trio',
+};
 
 export type PickupKind =
   | { type: 'weapon'; weapon: WeaponId; magazines?: number }
@@ -71,6 +95,41 @@ export interface LevelDefinition {
   build(builder: LevelBuilder): void;
 }
 
+export interface SlopeStep {
+  /** World Z of the step's centre. */
+  z: number;
+  /** Height of the step's walking surface. */
+  top: number;
+  depth: number;
+}
+
+/**
+ * Treads of a stepped slope, from the -Z end to the +Z end.
+ *
+ * Pulled out as a pure function because getting the two end heights the wrong
+ * way round silently builds a cliff where a ramp should be — it looks fine from
+ * every angle and only shows up when someone tries to walk down it.
+ */
+export function slopeSteps(
+  z: number,
+  depth: number,
+  yAtMinZ: number,
+  yAtMaxZ: number,
+  steps: number,
+): SlopeStep[] {
+  const stepDepth = depth / steps;
+  const out: SlopeStep[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = (i + 1) / steps;
+    out.push({
+      z: z - depth / 2 + stepDepth * (i + 0.5),
+      top: yAtMinZ + (yAtMaxZ - yAtMinZ) * t,
+      depth: stepDepth + 0.02,
+    });
+  }
+  return out;
+}
+
 /**
  * Levels are built from axis-aligned boxes: it keeps collision exact, it batches
  * well, and it happens to be exactly the vocabulary the ink pass flatters —
@@ -83,6 +142,7 @@ export class LevelBuilder {
   readonly triggers: Trigger[] = [];
   readonly interactables: Interactable[] = [];
   readonly enemies: EnemySpawn[] = [];
+  readonly lights: PointLight[] = [];
   readonly random: () => number;
 
   constructor(seed = 1414) {
@@ -103,11 +163,30 @@ export class LevelBuilder {
     depth: number,
     surface: Surface,
     hex: number,
-    options: { ramp?: 'flat' | 'duo' | 'trio'; collide?: boolean; visible?: boolean } = {},
+    options: {
+      ramp?: RampName;
+      texture?: SurfaceTexture;
+      /** World metres covered by one texture tile. */
+      tile?: number;
+      collide?: boolean;
+      visible?: boolean;
+      castShadow?: boolean;
+      receiveShadow?: boolean;
+    } = {},
   ): Mesh {
-    const material = toon(hex, { ramp: options.ramp ?? 'duo' });
-    const mesh = new Mesh(new BoxGeometry(width, height, depth), material);
+    const texture = options.texture ?? DEFAULT_TEXTURE[surface];
+    const material = toon(hex, {
+      ramp: options.ramp ?? DEFAULT_RAMP[surface],
+      ...(texture ? { texture } : {}),
+    });
+
+    const geometry = new BoxGeometry(width, height, depth);
+    if (texture) scaleBoxUVs(geometry, width, height, depth, options.tile ?? 2.2);
+
+    const mesh = new Mesh(geometry, material);
     mesh.position.set(x, y + height / 2, z);
+    mesh.castShadow = options.castShadow ?? true;
+    mesh.receiveShadow = options.receiveShadow ?? true;
     if (options.visible !== false) this.root.add(mesh);
 
     if (options.collide !== false) {
@@ -136,40 +215,86 @@ export class LevelBuilder {
   /** Decoration with no collision — safe to scatter in bulk. */
   decor(mesh: Mesh, x: number, y: number, z: number): Mesh {
     mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     this.root.add(mesh);
     return mesh;
+  }
+
+  /** Adds a pre-built prop group from the kit, with shadows wired up. */
+  prop(
+    object: Object3D,
+    x: number,
+    y: number,
+    z: number,
+    yaw = 0,
+    options: { shadows?: boolean } = {},
+  ): Object3D {
+    object.position.set(x, y, z);
+    object.rotation.y = yaw;
+    const shadows = options.shadows ?? true;
+    object.traverse((o) => {
+      if (o instanceof Mesh) {
+        o.castShadow = shadows;
+        o.receiveShadow = shadows;
+      }
+    });
+    this.root.add(object);
+    return object;
+  }
+
+  /**
+   * A practical light. The key light is a single low sun, so anything with a
+   * roof over it is pitch black without one of these — and cranking ambient to
+   * compensate would flatten the toon ramp everywhere outdoors.
+   *
+   * Deliberately shadowless: point-light shadow cubes cost six render passes
+   * each, and the ink pass already gives interiors their structure.
+   */
+  lamp(
+    x: number,
+    y: number,
+    z: number,
+    options: { colour?: number; intensity?: number; distance?: number } = {},
+  ): PointLight {
+    const light = new PointLight(
+      options.colour ?? 0xffd9a0,
+      options.intensity ?? 9,
+      options.distance ?? 9,
+      1.6,
+    );
+    light.position.set(x, y, z);
+    light.castShadow = false;
+    this.root.add(light);
+    this.lights.push(light);
+    return light;
   }
 
   /**
    * A stepped slope, built from boxes. Real ramps would need a triangle
    * collider; a staircase of boxes reads identically once inked and the
    * character controller steps up it for free.
+   *
+   * The heights are named for the ends they belong to — getting these the wrong
+   * way round builds a cliff where a ramp should be, and it is invisible until
+   * someone tries to walk down it.
    */
   slope(
     x: number,
     z: number,
     width: number,
     depth: number,
-    fromY: number,
-    toY: number,
+    yAtMinZ: number,
+    yAtMaxZ: number,
     steps: number,
     surface: Surface,
     hex: number,
   ): void {
-    const stepDepth = depth / steps;
-    for (let i = 0; i < steps; i++) {
-      const t = (i + 1) / steps;
-      const top = fromY + (toY - fromY) * t;
-      this.box(
-        x,
-        Math.min(fromY, toY) - 0.5,
-        z - depth / 2 + stepDepth * (i + 0.5),
-        width,
-        top - Math.min(fromY, toY) + 0.5,
-        stepDepth + 0.02,
-        surface,
-        hex,
-      );
+    const floor = Math.min(yAtMinZ, yAtMaxZ);
+    for (const step of slopeSteps(z, depth, yAtMinZ, yAtMaxZ, steps)) {
+      // Each step is dropped well below the pair it joins, so the slope is a
+      // solid wedge rather than a set of floating treads with sky underneath.
+      this.box(x, floor - 4, step.z, width, step.top - floor + 4, step.depth, surface, hex);
     }
   }
 

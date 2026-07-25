@@ -1,6 +1,6 @@
 {
   "updated": "2026-07-25",
-  "focus": "Le chapitre un est jouable de bout en bout. Ce qui manque n'est plus du moteur mais du contenu : un deuxième niveau, et des civils à ne pas abattre.",
+  "focus": "Passe artistique faite : l'éclairage était cassé (le cel-shading ne produisait aucun palier) et le monde était vide. En attente d'un deuxième avis sur le rendu avant d'attaquer le chapitre deux.",
   "narrative": "XIV part d'une contrainte simple : reproduire la sensation d'un album de bande dessinée jouable, sans studio et sans assets achetés. D'où trois partis pris qui structurent tout le reste — le trait est calculé en post-traitement plutôt que dessiné (Sobel sur profondeur et normales, avec un tremblement à 11 images/seconde qui imite l'encrage à la main) ; le son est entièrement synthétisé à l'exécution, ce qui met le jeu complet sous 700 ko ; et les vignettes incrustées ne sont pas des icônes mais un vrai second rendu du monde, gelé à l'instant du coup de feu. Le moteur est là. L'histoire aussi : cinq souvenirs, trois documents, une conspiration à quatorze noms.",
   "history": [
     { "label": "départ", "done": 0 },
@@ -8,10 +8,42 @@
     { "label": "combat & IA", "done": 12 },
     { "label": "vignettes BD", "done": 16 },
     { "label": "chapitre un", "done": 21 },
-    { "label": "industrialisation", "done": 26 }
+    { "label": "industrialisation", "done": 26 },
+    { "label": "passe artistique", "done": 35 }
   ],
-  "goal": 32,
+  "goal": 42,
   "sessions": [
+    {
+      "date": "2026-07-25",
+      "title": "S4b · Passe artistique",
+      "items": [
+        {
+          "tag": "T4b.1",
+          "status": "done",
+          "text": "L'éclairage était la cause racine : ambiante 0,62 + hémisphérique 0,7 saturaient toutes les surfaces dans la bande claire de la rampe toon, donc aucun palier, donc chaque mur était un aplat. Ambiante à 0,15, soleil à 1,4 (au-delà de ~1,5 le matériau toon écrête en blanc), albédos assombris."
+        },
+        {
+          "tag": "T4b.2",
+          "status": "done",
+          "text": "Les ombres portées ne sortaient pas : régler shadow.camera.left/right après construction ne suffit pas, Three ne recalcule jamais la matrice de projection. La caméra d'ombre gardait son frustum ±5 m au lieu de ±42."
+        },
+        {
+          "tag": "T4b.5",
+          "status": "done",
+          "text": "Le vrai problème n'était pas le réglage : une plaine vide ne donne aucune arête au Sobel, le trait n'a rien à dessiner. Vallée resserrée de 84 m à 40, murée de falaises, deux bâtiments avec de vrais intérieurs. ~400 → ~2 600 mailles."
+        },
+        {
+          "tag": "T4b.6",
+          "status": "done",
+          "text": "Conséquence de l'éclairage de scène : sous un toit il ne reste que l'ambiante, donc noir absolu. Monter l'ambiante aurait re-aplati l'extérieur — la réponse était des lumières ponctuelles réelles, sans ombre (une ombre de point light coûte six passes)."
+        },
+        {
+          "tag": "T4b.8",
+          "status": "done",
+          "text": "Une marche automatique du parcours a trouvé deux bugs qu'aucune capture ne montrait : le joueur était enfermé dans l'épave (paroi pleine côté sortie), et la pente était inversée — un mur de 6 m puis le vide au lieu d'une rampe. Cinq tests couvrent maintenant la géométrie de pente."
+        }
+      ]
+    },
     {
       "date": "2026-07-25",
       "title": "S0–S4 · Du fichier vide au chapitre jouable",
@@ -50,6 +82,10 @@
     }
   ],
   "next": [
+    {
+      "text": "T4b.10 — deuxième avis sur le rendu",
+      "blocked": "retour du joueur (c'est le seul juge utile ici)"
+    },
     { "text": "T4.6 — budget image mesuré et compteur de draw calls affichable en jeu" },
     { "text": "T5.1 — niveau 02 « Casier 14 », gare de Denver" },
     {

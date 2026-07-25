@@ -6,7 +6,75 @@ Entrée la plus récente en haut. La roadmap vivante (sprints/tâches) est dans
 
 ---
 
-## 2026-07-25
+## 2026-07-25 — passe artistique
+
+Retour joueur sans détour : « c'est moche et ça marche pas super bien ». Il avait raison sur les
+deux points, et le diagnostic était plus simple que prévu.
+
+### L'éclairage était cassé, et ça effondrait tout le reste
+
+Ambiante 0,62 + hémisphérique 0,7 par-dessus une directionnelle : toutes les surfaces saturaient
+dans la bande claire du dégradé toon. Le cel-shading ne produisait donc **aucun palier** — chaque
+mur était un rectangle d'une seule couleur. On ne peut pas rattraper ça avec du contenu.
+
+Corrections : ambiante à 0,15, hémisphérique à 0,42, soleil à 1,4 (au-dessus de ~1,5 le matériau
+toon écrête tout en blanc, parce qu'il multiplie albédo × rampe × lumière). Et les albédos de la
+palette ont été assombris — partir d'un blanc cassé ne laisse aucune place à la rampe.
+
+### Les ombres portées ne sortaient pas : `updateProjectionMatrix` manquant
+
+J'avais réglé `shadow.camera.left/right/top/bottom` à ±42 m après construction. Three ne recalcule
+jamais la matrice de projection tout seul : la caméra d'ombre gardait son frustum ±5 m par défaut,
+soit une carte d'ombre couvrant une seule porte. Un appel à `updateProjectionMatrix()` a suffi.
+Le frustum suit maintenant le joueur (`Stage.focusShadows`) pour garder de la densité de texels.
+
+### Un moteur n'est pas un monde
+
+Le vrai problème n'était pas le réglage : une plaine de neige de 84 m ne donne **aucune arête** au
+Sobel. Le trait d'encre n'a littéralement rien à dessiner. D'où :
+
+- une bibliothèque d'accessoires (`src/world/kit.ts`) : caisses avec traverses et croix de
+  Saint-André, bidons cerclés, vestiaires, étagères garnies, poêle avec conduit, poste radio,
+  couchettes, fenêtres à petits bois, portes ferrées, garde-corps, échelles, courses de tuyaux,
+  lampes, panneaux peints (texte généré au canvas), clôtures à neige, poteaux télégraphiques,
+  sapins enneigés en trois silhouettes, falaises, cabines de téléphérique, pylônes, treuil ;
+- un niveau resserré et meublé : la vallée est passée de 84 m à ~40 m de large, murée de falaises,
+  et le poste forestier comme la salle des treuils ont de vrais intérieurs où l'on entre ;
+- des textures procédurales générées au canvas, avec des UV mis à l'échelle du monde
+  (`scaleBoxUVs`) — sans ça une même texture s'étire sur une dalle de 60 m et s'écrase sur un
+  encadrement de porte.
+
+Le nombre de mailles est passé d'environ 400 à 2 600, et c'est précisément le but : ce sont autant
+d'arêtes noires en plus dans le cadre.
+
+### Les intérieurs étaient dans le noir absolu
+
+Conséquence directe de l'éclairage de scène : sous un toit, il ne reste que 0,15 d'ambiante.
+Monter l'ambiante aurait re-aplati tout l'extérieur. La bonne réponse était des sources
+ponctuelles réelles (`LevelBuilder.lamp`), volontairement sans ombre — une ombre de lumière
+ponctuelle coûte six passes de rendu, et l'encrage donne déjà sa structure à la pièce.
+
+### Deux bugs bloquants trouvés par une marche automatique
+
+J'ai écrit un test qui pousse le joueur d'étape en étape le long du parcours et vérifie qu'il
+n'est ni coincé ni en chute libre. Il a trouvé tout de suite ce qu'aucune capture d'écran ne
+montrait :
+
+1. **Le joueur était enfermé dans l'épave.** La paroi pleine de la cabine faisait face à la sortie.
+   La cabine a maintenant une variante `openFront` déchirée sur toute la hauteur — sinon il aurait
+   fallu enjamber un seuil de 50 cm dès la première seconde de jeu.
+2. **La pente était inversée.** `slope()` interprétait ses deux hauteurs dans l'ordre inverse de
+   celui que le niveau supposait : au lieu d'une rampe, un mur de 6 m puis le vide. Les paramètres
+   s'appellent désormais `yAtMinZ` / `yAtMaxZ`, la géométrie de marche est extraite en fonction
+   pure `slopeSteps()`, et cinq tests la couvrent — dont un qui vérifie qu'aucune contremarche ne
+   dépasse la hauteur de pas du personnage.
+
+Ajouté au passage : un garde-fou anti-chute (`VOID_FLOOR`) qui repose le joueur sur son dernier
+appui au sol au lieu de le laisser tomber indéfiniment.
+
+---
+
+## 2026-07-25 — premier jet
 
 ### Le pipeline d'encrage
 

@@ -1,19 +1,19 @@
 import {
   DataTexture,
-  LinearFilter,
   MeshToonMaterial,
   NearestFilter,
   RedFormat,
-  RepeatWrapping,
   Texture,
   UnsignedByteType,
 } from 'three';
 import { color } from './palette.ts';
+import { surfaceTexture, type SurfaceTexture } from './textures.ts';
 
 /**
  * A gradient map turns Lambert lighting into hard steps — the single most
- * important ingredient of the look. Two steps reads as a printed album,
- * three keeps enough form on characters to stay legible in motion.
+ * important ingredient of the look. It only works if the scene is lit like a
+ * stage: one strong key, almost no ambient. Flood the scene with fill light and
+ * every surface saturates into the top band, which reads as flat unlit colour.
  */
 function gradientMap(steps: readonly number[]): DataTexture {
   const data = new Uint8Array(steps.length);
@@ -26,23 +26,34 @@ function gradientMap(steps: readonly number[]): DataTexture {
   return tex;
 }
 
-/** Flat: one tone, for props that should sit back in the plate. */
-export const RAMP_FLAT = /* @__PURE__ */ gradientMap([0.72]);
-/** Two-tone: the default for architecture and terrain. */
-export const RAMP_DUO = /* @__PURE__ */ gradientMap([0.42, 1.0]);
-/** Three-tone: characters, so silhouettes keep their volume. */
-export const RAMP_TRIO = /* @__PURE__ */ gradientMap([0.34, 0.68, 1.0]);
+/** Flat: one tone, for small props that should sit back in the plate. */
+export const RAMP_FLAT = /* @__PURE__ */ gradientMap([0.86]);
+/** Two-tone: hard light/shade break. Architecture, crates, metalwork. */
+export const RAMP_DUO = /* @__PURE__ */ gradientMap([0.36, 1.0]);
+/** Three-tone: characters and anything curved, so volume survives motion. */
+export const RAMP_TRIO = /* @__PURE__ */ gradientMap([0.26, 0.58, 1.0]);
+/**
+ * Snow: bright everywhere, but with two cool steps so drifts still show form.
+ * A duo ramp on snow makes the shaded side read as grey mud.
+ */
+export const RAMP_SNOW = /* @__PURE__ */ gradientMap([0.6, 0.8, 1.0]);
+/** Sky-facing foliage: dark base so pines read as silhouettes against snow. */
+export const RAMP_FOLIAGE = /* @__PURE__ */ gradientMap([0.2, 0.52, 0.9]);
 
-export type RampName = 'flat' | 'duo' | 'trio';
+export type RampName = 'flat' | 'duo' | 'trio' | 'snow' | 'foliage';
 
 const RAMPS: Record<RampName, DataTexture> = {
   flat: RAMP_FLAT,
   duo: RAMP_DUO,
   trio: RAMP_TRIO,
+  snow: RAMP_SNOW,
+  foliage: RAMP_FOLIAGE,
 };
 
 export interface ToonOptions {
   ramp?: RampName;
+  /** Procedural surface detail; the mesh must have world-scaled UVs. */
+  texture?: SurfaceTexture;
   map?: Texture;
   transparent?: boolean;
   opacity?: number;
@@ -57,9 +68,9 @@ const materialCache = new Map<string, MeshToonMaterial>();
  */
 export function toon(hex: number, options: ToonOptions = {}): MeshToonMaterial {
   const ramp = options.ramp ?? 'duo';
-  const key = `${hex}|${ramp}|${options.map?.uuid ?? ''}|${options.transparent ?? false}|${
-    options.opacity ?? 1
-  }|${options.emissive ?? 0}`;
+  const key = `${hex}|${ramp}|${options.texture ?? ''}|${options.map?.uuid ?? ''}|${
+    options.transparent ?? false
+  }|${options.opacity ?? 1}|${options.emissive ?? 0}`;
 
   let mat = materialCache.get(key);
   if (mat) return mat;
@@ -68,7 +79,9 @@ export function toon(hex: number, options: ToonOptions = {}): MeshToonMaterial {
     color: color(hex),
     gradientMap: RAMPS[ramp],
   });
-  if (options.map) mat.map = options.map;
+  if (options.texture) mat.map = surfaceTexture(options.texture);
+  else if (options.map) mat.map = options.map;
+
   if (options.transparent) {
     mat.transparent = true;
     mat.opacity = options.opacity ?? 1;
@@ -79,28 +92,7 @@ export function toon(hex: number, options: ToonOptions = {}): MeshToonMaterial {
   return mat;
 }
 
-/**
- * Hand-drawn hatching, generated rather than authored: used on large flat
- * surfaces so they don't read as dead polygons under the ink pass.
- */
-export function hatchTexture(size = 128, density = 0.14): DataTexture {
-  const data = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const i = (y * size + x) * 4;
-      const onLine = (x + y) % 9 === 0 && Math.random() < density * 6;
-      const v = onLine ? 190 : 255;
-      data[i] = v;
-      data[i + 1] = v;
-      data[i + 2] = v;
-      data[i + 3] = 255;
-    }
-  }
-  const tex = new DataTexture(data, size, size);
-  tex.wrapS = RepeatWrapping;
-  tex.wrapT = RepeatWrapping;
-  tex.minFilter = LinearFilter;
-  tex.magFilter = LinearFilter;
-  tex.needsUpdate = true;
-  return tex;
+/** Unlit flat colour — used for very distant silhouettes and sky elements. */
+export function flat(hex: number): MeshToonMaterial {
+  return toon(hex, { ramp: 'flat' });
 }

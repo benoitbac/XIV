@@ -153,7 +153,7 @@
       "tasks": [
         {
           "id": "T4.1",
-          "title": "26 tests unitaires : collisions, maths, cohérence des tables de données",
+          "title": "31 tests unitaires : collisions, maths, terrain, cohérence des tables",
           "status": "done"
         },
         { "id": "T4.2", "title": "CI : types + format + tests sur 3 OS + build", "status": "done" },
@@ -175,6 +175,65 @@
         {
           "id": "T4.6",
           "title": "Mesure de perf réelle : budget image, compteur de draw calls in-game",
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "S4b",
+      "start": "2026-07-25",
+      "end": "2026-07-26",
+      "title": "Passe artistique — de l'art de programmeur au décor",
+      "goal": "Retour joueur : « c'est moche et ça marche pas ». Reprendre l'éclairage, les ombres, la matière et le contenu du niveau.",
+      "tasks": [
+        {
+          "id": "T4b.1",
+          "title": "Éclairage de scène : ambiante effondrée, soleil calibré, albédos assombris",
+          "status": "done"
+        },
+        {
+          "id": "T4b.2",
+          "title": "Ombres portées cel (le frustum manquait son updateProjectionMatrix) + suivi joueur",
+          "status": "done"
+        },
+        {
+          "id": "T4b.3",
+          "title": "Textures procédurales + UV à l'échelle du monde",
+          "status": "done"
+        },
+        {
+          "id": "T4b.4",
+          "title": "Bibliothèque d'accessoires : 25 éléments, du cageot au pylône",
+          "status": "done"
+        },
+        {
+          "id": "T4b.5",
+          "title": "Niveau resserré et meublé, vrais intérieurs, ~2 600 mailles",
+          "status": "done"
+        },
+        {
+          "id": "T4b.6",
+          "title": "Sources lumineuses intérieures (les pièces étaient noires)",
+          "status": "done"
+        },
+        {
+          "id": "T4b.7",
+          "title": "Personnages redessinés : proportions, manteau, arme en travers",
+          "status": "done"
+        },
+        {
+          "id": "T4b.8",
+          "title": "Marche automatique du parcours : 2 bugs bloquants trouvés et corrigés",
+          "status": "done"
+        },
+        {
+          "id": "T4b.9",
+          "title": "Falaises, montagnes lointaines, horizon lisible",
+          "status": "done"
+        },
+        {
+          "id": "T4b.10",
+          "title": "Deuxième avis joueur sur le rendu avant d'aller plus loin",
           "status": "todo"
         }
       ]

@@ -193,6 +193,8 @@ export class Enemy {
   ): Part {
     const mesh = new Mesh(new BoxGeometry(w, h, d), material);
     mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     if (name) mesh.name = name;
     this.group.add(mesh);
     const part: Part = {
@@ -206,31 +208,104 @@ export class Enemy {
     return part;
   }
 
+  /** Non-colliding trim: belts, straps, pockets. Detail for the ink pass only. */
+  #trim(
+    w: number,
+    h: number,
+    d: number,
+    x: number,
+    y: number,
+    z: number,
+    material: MeshToonMaterial,
+  ): Mesh {
+    const mesh = new Mesh(new BoxGeometry(w, h, d), material);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    this.group.add(mesh);
+    return mesh;
+  }
+
+  /**
+   * A guard, drawn rather than blocked out. The proportions matter more than
+   * the polygon count: a small head, wide shoulders, a coat that flares below
+   * the belt and a rifle carried across the chest are what make a stack of
+   * boxes read as a man at forty metres.
+   */
   #build(): void {
     const a = this.archetype;
     const jacket = toon(a.jacket, { ramp: 'trio' });
+    const jacketDark = toon(shade(a.jacket, 0.72), { ramp: 'trio' });
     const trousers = toon(a.trousers, { ramp: 'trio' });
-    const skin = toon(0xd9a877, { ramp: 'trio' });
+    const skin = toon(0xc98f5f, { ramp: 'trio' });
     const accent = toon(a.accent, { ramp: 'trio' });
-    const gunMat = toon(PALETTE.steelDark, { ramp: 'trio' });
-    this.#materials.push(jacket, trousers, skin, accent, gunMat);
+    const leather = toon(0x2a2018, { ramp: 'trio' });
+    const gunMat = toon(0x23272d, { ramp: 'trio' });
+    const woodMat = toon(0x4a3423, { ramp: 'trio' });
+    this.#materials.push(jacket, jacketDark, trousers, skin, accent, leather, gunMat, woodMat);
 
-    this.#addPart('torso', 0.5, 0.62, 0.29, 0, 1.02, 0, jacket);
-    this.#addPart('torso', 0.52, 0.14, 0.31, 0, 1.36, 0, accent); // collar
-    this.#addPart('head', 0.25, 0.27, 0.25, 0, 1.58, 0, a.helmet ? jacket : skin, 'head');
+    // Legs first, so the coat overlaps them.
+    this.#addPart('limb', 0.17, 0.78, 0.19, -0.115, 0.42, 0, trousers, 'legL');
+    this.#addPart('limb', 0.17, 0.78, 0.19, 0.115, 0.42, 0, trousers, 'legR');
+    this.#trim(0.2, 0.16, 0.28, -0.115, 0.08, 0.03, leather);
+    this.#trim(0.2, 0.16, 0.28, 0.115, 0.08, 0.03, leather);
+
+    // Torso: chest box plus a narrower waist, then the coat skirt.
+    this.#addPart('torso', 0.46, 0.44, 0.26, 0, 1.24, 0, jacket);
+    this.#addPart('torso', 0.4, 0.22, 0.23, 0, 0.94, 0, jacket);
+    this.#trim(0.44, 0.34, 0.27, 0, 0.72, 0, jacketDark); // coat skirt
+    this.#trim(0.42, 0.07, 0.28, 0, 0.9, 0, leather); // belt
+    this.#trim(0.09, 0.09, 0.05, 0, 0.9, 0.15, accent); // buckle
+
+    // Shoulders are a separate, wider block — this is the silhouette cue that
+    // separates a soldier from a civilian at distance.
+    this.#trim(0.62, 0.14, 0.3, 0, 1.44, 0, jacket);
+    this.#addPart('torso', 0.34, 0.1, 0.26, 0, 1.53, 0, accent); // collar
+
+    // Head: deliberately small. A head-sized head makes everything look like a toy.
+    this.#addPart('head', 0.21, 0.24, 0.22, 0, 1.66, 0, skin, 'head');
+    this.#trim(0.13, 0.09, 0.02, 0, 1.66, -0.115, jacketDark); // brow shadow / features
     if (a.helmet) {
-      this.#addPart('head', 0.29, 0.1, 0.29, 0, 1.7, 0, trousers);
+      this.#addPart('head', 0.26, 0.12, 0.27, 0, 1.79, 0, jacketDark);
+      this.#trim(0.28, 0.04, 0.1, 0, 1.74, -0.13, jacketDark); // peak
+      this.#trim(0.05, 0.05, 0.02, 0.09, 0.9, 0.15, accent);
+    } else {
+      this.#trim(0.23, 0.07, 0.24, 0, 1.79, 0, jacketDark); // knitted cap
+      this.#trim(0.24, 0.05, 0.25, 0, 1.74, 0, accent);
     }
-    // Arms hold the weapon out front, which is what sells "he's aiming at me".
-    this.#addPart('limb', 0.14, 0.44, 0.16, -0.31, 1.06, -0.06, jacket, 'armL');
-    this.#addPart('limb', 0.14, 0.44, 0.16, 0.31, 1.06, -0.06, jacket, 'armR');
-    this.#addPart('limb', 0.19, 0.72, 0.2, -0.13, 0.36, 0, trousers, 'legL');
-    this.#addPart('limb', 0.19, 0.72, 0.2, 0.13, 0.36, 0, trousers, 'legR');
 
-    const rifle = new Mesh(new BoxGeometry(0.07, 0.09, 0.62), gunMat);
-    rifle.position.set(0.27, 1.06, -0.34);
+    // Arms: upper and forearm, angled in toward the weapon.
+    for (const side of [-1, 1] as const) {
+      const tag = side < 0 ? 'L' : 'R';
+      this.#addPart('limb', 0.13, 0.3, 0.15, side * 0.29, 1.29, 0, jacket, `armUpper${tag}`);
+      this.#addPart('limb', 0.115, 0.28, 0.13, side * 0.26, 1.02, -0.13, jacket, `armLower${tag}`);
+      this.#trim(0.1, 0.09, 0.11, side * 0.24, 0.88, -0.2, leather); // glove
+    }
+
+    // Rifle carried across the chest, muzzle to the left.
+    const rifle = new Group();
+    const barrel = new Mesh(new BoxGeometry(0.05, 0.05, 0.66), gunMat);
+    barrel.position.set(0, 0, -0.1);
+    const receiver = new Mesh(new BoxGeometry(0.07, 0.11, 0.3), gunMat);
+    receiver.position.set(0, -0.01, 0.14);
+    const stock = new Mesh(new BoxGeometry(0.06, 0.13, 0.26), woodMat);
+    stock.position.set(0, -0.05, 0.4);
+    const magazine = new Mesh(new BoxGeometry(0.05, 0.18, 0.07), gunMat);
+    magazine.position.set(0, -0.15, 0.16);
+    const sight = new Mesh(new BoxGeometry(0.02, 0.05, 0.02), gunMat);
+    sight.position.set(0, 0.07, -0.36);
+    rifle.add(barrel, receiver, stock, magazine, sight);
+    rifle.position.set(0.16, 1.06, -0.2);
+    rifle.rotation.set(0, -0.35, 0.22);
     rifle.name = 'rifle';
+    rifle.traverse((o) => {
+      if (o instanceof Mesh) o.castShadow = true;
+    });
     this.group.add(rifle);
+
+    // Sling: a strap from the shoulder to the weapon.
+    const sling = this.#trim(0.05, 0.5, 0.03, 0.02, 1.22, -0.12, leather);
+    sling.rotation.z = 0.42;
+    sling.rotation.x = -0.25;
 
     this.group.userData.enemy = this;
   }
@@ -567,16 +642,29 @@ export class Enemy {
 
     const legL = this.group.getObjectByName('legL');
     const legR = this.group.getObjectByName('legR');
-    const armL = this.group.getObjectByName('armL');
-    const armR = this.group.getObjectByName('armR');
     if (legL) legL.rotation.x = s * swing;
     if (legR) legR.rotation.x = -s * swing;
-    if (armL) armL.rotation.x = -s * swing * 0.6;
-    // The right arm holds the rifle, so it only sways when not aiming.
-    if (armR) armR.rotation.x = this.state === 'combat' ? -0.35 : s * swing * 0.6;
+
+    // Both arms stay on the weapon in combat; out of combat the left one swings
+    // and the rifle drops to a carry angle.
+    const fighting = this.state === 'combat';
+    const armSwing = fighting ? 0 : s * swing * 0.5;
+    for (const [name, sign] of [
+      ['armUpperL', -1],
+      ['armLowerL', -1],
+      ['armUpperR', 1],
+      ['armLowerR', 1],
+    ] as const) {
+      const arm = this.group.getObjectByName(name);
+      if (arm) arm.rotation.x = armSwing * sign;
+    }
 
     const rifle = this.group.getObjectByName('rifle');
-    if (rifle) rifle.rotation.x = this.state === 'combat' ? -0.05 : 0.5;
+    if (rifle) {
+      // Raised and levelled when fighting, slung low and canted when not.
+      rifle.rotation.set(fighting ? -0.04 : 0.42, fighting ? -0.06 : -0.35, fighting ? 0.04 : 0.22);
+      rifle.position.set(fighting ? 0.1 : 0.16, fighting ? 1.32 : 1.06, fighting ? -0.28 : -0.2);
+    }
 
     // Hit flash: the whole figure blanches for a beat, comic-book style.
     if (this.#hitFlash > 0) {
@@ -640,6 +728,14 @@ function intersectBox(
     if (tmin > tmax) return null;
   }
   return tmin >= 0 && tmin <= maxDistance ? tmin : null;
+}
+
+/** Darkens a packed hex colour — used for coat linings and cap shadow. */
+function shade(hex: number, factor: number): number {
+  const r = Math.round(((hex >> 16) & 0xff) * factor);
+  const g = Math.round(((hex >> 8) & 0xff) * factor);
+  const b = Math.round((hex & 0xff) * factor);
+  return (r << 16) | (g << 8) | b;
 }
 
 const _eye = new Vector3();

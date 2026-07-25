@@ -107,6 +107,8 @@ export class Game {
   readonly #tmpA = new Vector3();
   readonly #tmpB = new Vector3();
   readonly #playerBox = new Box3();
+  /** Last position the player was standing on solid ground. */
+  readonly #lastFooting = new Vector3();
 
   constructor(canvas: HTMLCanvasElement, overlayRoot: HTMLElement) {
     this.#canvas = canvas;
@@ -216,6 +218,7 @@ export class Game {
     player.baseFov = this.settings.fov;
     player.damageTaken = DIFFICULTY[this.settings.difficulty].damageTaken;
     player.spawn(definition.spawn.position.clone(), definition.spawn.yaw);
+    this.#lastFooting.copy(definition.spawn.position);
     this.#player = player;
 
     const effects = new Effects(builder.world);
@@ -881,6 +884,9 @@ export class Game {
     if (player && this.#level) {
       const canAct = playing && player.alive;
       player.update(dt, this.input, canAct);
+      // Keep the tight shadow frustum centred on whoever we're looking through.
+      this.stage.focusShadows(player.position);
+      this.#guardAgainstVoid(player);
 
       if (playing) {
         const eye = player.eyePosition(this.#tmpA);
@@ -924,6 +930,23 @@ export class Game {
     this.input.endFrame();
   }
 
+  /**
+   * A level built from boxes will always have a seam somewhere. Falling out of
+   * the world should cost you, not end the session: put the player back on the
+   * last ground they stood on and take a bite out of their health.
+   */
+  #guardAgainstVoid(player: Player): void {
+    if (player.position.y > VOID_FLOOR) {
+      if (player.grounded) this.#lastFooting.copy(player.position);
+      return;
+    }
+    player.position.copy(this.#lastFooting);
+    player.velocity.set(0, 0, 0);
+    player.applyDamage(20, null);
+    player.addShake(0.6);
+    this.hud.toast('Tu as glissé. Reprends pied.', 'info');
+  }
+
   #refreshHud(): void {
     const player = this.#player;
     if (!player) return;
@@ -956,6 +979,9 @@ export class Game {
 }
 
 const _up = new Vector3(0, 1, 0);
+
+/** Below this height the player is considered to have fallen out of the level. */
+const VOID_FLOOR = -12;
 
 /** Slab test against a single box; mirrors the one in Collision for the player. */
 function rayBox(
