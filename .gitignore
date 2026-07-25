@@ -1,0 +1,30 @@
+## Node
+node_modules/
+npm-debug.log*
+*.tsbuildinfo
+
+## Vite build output
+dist/
+dist-ssr/
+.vite/
+
+## Test / coverage
+coverage/
+
+## Claude Code (personal, not shared)
+.claude/settings.local.json
+
+## IDE
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+## OS
+Thumbs.db
+.DS_Store
+
+## Local env
+.env
+.env.local
+.env.*.local

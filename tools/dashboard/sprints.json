@@ -1,0 +1,235 @@
+{
+  "epic": "XIV — Le Quatorzième Jour · Recette #1 : le chapitre un jouable de bout en bout",
+  "goal": "Un FPS cel-shadé en vignettes de bande dessinée, jouable dans un navigateur sans installation, avec une histoire originale : un homme sans mémoire, quatorze jours après un assassinat qu'il a peut-être commis.",
+  "updated": "2026-07-25",
+  "sprints": [
+    {
+      "id": "S0",
+      "start": "2026-07-25",
+      "end": "2026-07-25",
+      "title": "Socle technique — la planche s'encre",
+      "goal": "Prouver que le rendu BD tient dans le navigateur, et poser le moteur : rendu, entrées, collisions, audio.",
+      "tasks": [
+        {
+          "id": "T0.1",
+          "title": "Bootstrap Vite + TypeScript strict + Three.js",
+          "status": "done"
+        },
+        {
+          "id": "T0.2",
+          "title": "Pipeline cel-shading : toon à paliers, Sobel profondeur+normales, trait qui « bout »",
+          "status": "done"
+        },
+        {
+          "id": "T0.3",
+          "title": "Trame de demi-teintes + grain papier + ciel en bandes plates",
+          "status": "done"
+        },
+        {
+          "id": "T0.4",
+          "title": "Contrôleur FPS : capsule cinématique, coyote time, jump buffer, penché",
+          "status": "done"
+        },
+        {
+          "id": "T0.5",
+          "title": "Collisions AABB : grille large-phase, move-and-slide, marche d'escalier",
+          "status": "done"
+        },
+        {
+          "id": "T0.6",
+          "title": "Audio 100 % synthétisé (zéro asset binaire) + spatialisation HRTF",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "S1",
+      "start": "2026-07-25",
+      "end": "2026-07-25",
+      "title": "Combat & IA — quelqu'un vous cherche",
+      "goal": "Rendre l'affrontement lisible : armes qui ont du poids, gardes qui voient, entendent et se préviennent.",
+      "tasks": [
+        {
+          "id": "T1.1",
+          "title": "Armes : 5 armes + corps-à-corps, recul à ressort, dispersion, rechargement",
+          "status": "done"
+        },
+        {
+          "id": "T1.2",
+          "title": "View model procédural : ballant, roulis de marche, animation de rechargement",
+          "status": "done"
+        },
+        {
+          "id": "T1.3",
+          "title": "Dégâts localisés (tête / torse / membres) et hitbox par pièce",
+          "status": "done"
+        },
+        {
+          "id": "T1.4",
+          "title": "IA : patrouille → suspicion → combat → recherche, cône de vision + ouïe",
+          "status": "done"
+        },
+        {
+          "id": "T1.5",
+          "title": "Escouades : un garde qui vous repère alerte les siens",
+          "status": "done"
+        },
+        {
+          "id": "T1.6",
+          "title": "VFX poolés : traçantes, impacts, sang, douilles, éclat de bouche",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "start": "2026-07-25",
+      "end": "2026-07-25",
+      "title": "La signature — vignettes et onomatopées",
+      "goal": "Ce qui fait qu'on reconnaît le genre en trois secondes : la case incrustée et le lettrage.",
+      "tasks": [
+        {
+          "id": "T2.1",
+          "title": "Vignettes : vrai second rendu du monde via le même pipeline, gelé et épinglé dans un coin",
+          "status": "done"
+        },
+        {
+          "id": "T2.2",
+          "title": "Cadrage automatique en trois-quarts + inclinaison aléatoire de la case",
+          "status": "done"
+        },
+        {
+          "id": "T2.3",
+          "title": "Onomatopées ancrées en 3D et projetées à l'écran",
+          "status": "done"
+        },
+        {
+          "id": "T2.4",
+          "title": "Flashbacks : même presse, couleur retirée, grain poussé",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "start": "2026-07-25",
+      "end": "2026-07-25",
+      "title": "Chapitre un — Le Téléphérique",
+      "goal": "Un niveau complet, six actes, de l'épave à la cabine de sortie.",
+      "tasks": [
+        {
+          "id": "T3.1",
+          "title": "Scénario original : le Conclave des Quatorze, 5 souvenirs, 3 documents",
+          "status": "done"
+        },
+        {
+          "id": "T3.2",
+          "title": "Géométrie du niveau : 3 plateaux, poste forestier, salle des treuils, gare aval",
+          "status": "done"
+        },
+        {
+          "id": "T3.3",
+          "title": "Objectifs, déclencheurs, ramassages, interactions, fin de chapitre",
+          "status": "done"
+        },
+        {
+          "id": "T3.4",
+          "title": "HUD encré + menus + carnet (souvenirs / documents)",
+          "status": "done"
+        },
+        {
+          "id": "T3.5",
+          "title": "Sauvegarde locale + réglages persistés + 3 difficultés",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "start": "2026-07-25",
+      "end": "2026-07-26",
+      "title": "Industrialisation — le repo tient debout tout seul",
+      "goal": "CI, Pages, tests, dashboard : le projet doit se vérifier sans moi.",
+      "tasks": [
+        {
+          "id": "T4.1",
+          "title": "26 tests unitaires : collisions, maths, cohérence des tables de données",
+          "status": "done"
+        },
+        { "id": "T4.2", "title": "CI : types + format + tests sur 3 OS + build", "status": "done" },
+        {
+          "id": "T4.3",
+          "title": "Déploiement GitHub Pages à chaque push sur master",
+          "status": "done"
+        },
+        {
+          "id": "T4.4",
+          "title": "Workflow de release sur tag, archives web attachées",
+          "status": "done"
+        },
+        {
+          "id": "T4.5",
+          "title": "Dashboard de suivi (SSE + Gantt SVG + audit des pratiques)",
+          "status": "done"
+        },
+        {
+          "id": "T4.6",
+          "title": "Mesure de perf réelle : budget image, compteur de draw calls in-game",
+          "status": "todo"
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "start": "2026-07-26",
+      "end": "2026-07-31",
+      "title": "Chapitre deux — Casier 14",
+      "goal": "Gare de Denver. Intérieurs, foule, infiltration : prouver que le moteur tient hors de la neige.",
+      "tasks": [
+        {
+          "id": "T5.1",
+          "title": "Niveau 02 : hall de gare, quais, consigne — géométrie et éclairage intérieur",
+          "status": "todo"
+        },
+        {
+          "id": "T5.2",
+          "title": "PNJ civils : foule qui panique, distinction ami/ennemi, malus si on tire dans le tas",
+          "status": "todo"
+        },
+        {
+          "id": "T5.3",
+          "title": "Infiltration réelle : déguisement, champ de suspicion, alarmes à couper",
+          "status": "todo"
+        },
+        { "id": "T5.4", "title": "Souvenirs VI à X + documents du Conclave", "status": "todo" },
+        {
+          "id": "T5.5",
+          "title": "Portes, ascenseurs, vitres brisables (le brush `glass` existe déjà, inutilisé)",
+          "status": "todo"
+        }
+      ]
+    }
+  ],
+  "backlog": [
+    {
+      "title": "Ennemi « Numéro XIII »",
+      "note": "Le prédécesseur. Un boss qui utilise exactement les mêmes systèmes que le joueur : même IA de couverture, mêmes armes, même recul."
+    },
+    {
+      "title": "Mode manuscrit",
+      "note": "Un filtre où toute la planche passe en crayonné bleu non encré, pour les flashbacks longs."
+    },
+    {
+      "title": "Compression du niveau en fichier de données",
+      "note": "Les niveaux sont du code TypeScript aujourd'hui. Les passer en JSON permettrait un éditeur."
+    },
+    {
+      "title": "Manette",
+      "note": "Gamepad API + zones mortes + aide à la visée. Le pointer lock est très clavier/souris."
+    },
+    {
+      "title": "Traduction anglaise",
+      "note": "Tout le texte est déjà isolé dans src/story/ — c'est un travail de fichier, pas de code."
+    }
+  ]
+}

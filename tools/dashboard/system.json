@@ -1,0 +1,126 @@
+{
+  "title": "XIV — carte du moteur",
+  "summary": "Un seul bundle navigateur, zéro serveur, zéro asset binaire hors polices. Tout ce qui s'affiche est généré à l'exécution : géométrie en boîtes, sons synthétisés, trait d'encre calculé en post-traitement.",
+  "stack": "TypeScript strict · Three.js · Vite · WebGL2 · WebAudio · Vitest",
+  "layers": [
+    {
+      "name": "Rendu",
+      "desc": "trois passes, une planche",
+      "bricks": [
+        {
+          "name": "Stage",
+          "title": "Stage",
+          "path": "src/render/Stage.ts",
+          "ports": ["passe couleur (toon)", "passe normales", "snapshot pour vignettes"],
+          "role": "Possède le contexte WebGL, les deux cibles hors écran et le rig d'éclairage."
+        },
+        {
+          "name": "ComicPass",
+          "title": "ComicPass",
+          "path": "src/render/ComicPass.ts",
+          "ports": ["Sobel profondeur+normales", "trame 25°", "grain papier"],
+          "role": "Le look entier tient dans ce fragment shader."
+        },
+        {
+          "name": "toon",
+          "title": "Matériaux",
+          "path": "src/render/toon.ts",
+          "ports": ["rampes 1/2/3 paliers", "cache par paramètres"],
+          "role": "Quantise l'éclairage. Partage les matériaux pour que les centaines de boîtes se batchent."
+        }
+      ]
+    },
+    {
+      "name": "Simulation",
+      "desc": "ce qui bouge",
+      "bricks": [
+        {
+          "name": "Player",
+          "title": "Player",
+          "path": "src/player/Player.ts",
+          "ports": ["capsule cinématique", "recul à ressort", "armes"],
+          "role": "Déplacement, visée, tir, dégâts. N'alloue rien par frame."
+        },
+        {
+          "name": "Enemy",
+          "title": "Enemy",
+          "path": "src/ai/Enemy.ts",
+          "ports": ["5 états", "cône de vision + ouïe", "hitbox par pièce"],
+          "role": "Un garde. Silhouette en boîtes, cycle de marche procédural."
+        },
+        {
+          "name": "Collision",
+          "title": "BrushWorld",
+          "path": "src/world/Collision.ts",
+          "ports": ["grille XZ large-phase", "raycast slab", "move-and-slide"],
+          "role": "Tout le monde physique, en boîtes alignées sur les axes."
+        }
+      ]
+    },
+    {
+      "name": "Mise en scène",
+      "desc": "la couche qui fait le genre",
+      "bricks": [
+        {
+          "name": "ComicPanels",
+          "title": "Vignettes",
+          "path": "src/ui/ComicPanels.ts",
+          "ports": ["seconde caméra", "readback pixels", "cadrage trois-quarts"],
+          "role": "Gèle un instant du monde et l'épingle dans un coin de la page."
+        },
+        {
+          "name": "Onomatopoeia",
+          "title": "Lettrage",
+          "path": "src/ui/Onomatopoeia.ts",
+          "ports": ["ancrage 3D", "projection écran"],
+          "role": "BLAM sur la bouche du canon, pas sur le HUD."
+        },
+        {
+          "name": "story",
+          "title": "Scénario",
+          "path": "src/story/story.ts",
+          "ports": ["souvenirs", "documents", "répliques", "objectifs"],
+          "role": "Tout le texte joueur. Aucune phrase française ailleurs dans le code."
+        }
+      ]
+    },
+    {
+      "name": "Outillage",
+      "desc": "hors bundle",
+      "bricks": [
+        {
+          "name": "dashboard",
+          "title": "Dashboard",
+          "path": "tools/dashboard/server.mjs",
+          "ports": ["SSE :5014"],
+          "dashboard": "http://localhost:5014",
+          "role": "Ce cockpit. Scanne le dépôt en direct et s'audite lui-même."
+        }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "Game", "to": "Stage", "label": "pilote les trois passes par frame" },
+    { "from": "Game", "to": "Player", "label": "résout les tirs contre le monde et les gardes" },
+    { "from": "Player", "to": "BrushWorld", "label": "move-and-slide" },
+    { "from": "Enemy", "to": "BrushWorld", "label": "ligne de vue + navigation" },
+    {
+      "from": "ComicPanels",
+      "to": "Stage",
+      "label": "snapshot (blocage GPU, événements discrets seulement)"
+    },
+    { "from": "Effects", "to": "BrushWorld", "label": "douilles qui rebondissent" }
+  ],
+  "conflicts": [
+    {
+      "port": "readRenderTargetPixels",
+      "projects": ["ComicPanels"],
+      "note": "Synchrone : bloque le GPU ~2 ms. Limité à une vignette toutes les 1,1 s, jamais dans la boucle de tir."
+    },
+    {
+      "port": "2 passes de scène",
+      "projects": ["Stage.render"],
+      "note": "La géométrie est dessinée deux fois (couleur + normales). Un rendu MRT en une passe est possible mais demanderait de patcher tous les matériaux."
+    }
+  ]
+}

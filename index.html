@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#141210" />
+    <title>XIV — Le Quatorzième Jour</title>
+    <meta
+      name="description"
+      content="XIV — un FPS cel-shadé en vignettes de bande dessinée. Quatorze jours après l'assassinat de la Chancelière Kessler, un homme se réveille sans mémoire."
+    />
+    <meta property="og:title" content="XIV — Le Quatorzième Jour" />
+    <meta
+      property="og:description"
+      content="FPS cel-shadé, vignettes BD incrustées et onomatopées. Une nouvelle histoire, dans l'esprit des albums."
+    />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <canvas id="viewport" tabindex="0"></canvas>
+    <div id="overlay"></div>
+
+    <div id="boot">
+      <div class="boot__numeral">XIV</div>
+      <div class="boot__label">Encrage de la planche…</div>
+    </div>
+
+    <noscript>
+      <div class="fatal">
+        <div class="fatal__numeral">XIV</div>
+        <h1>JavaScript est désactivé</h1>
+        <p>XIV est un jeu qui tourne dans le navigateur. Active JavaScript pour le lancer.</p>
+      </div>
+    </noscript>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

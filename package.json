@@ -1,0 +1,52 @@
+{
+  "name": "xiv",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "XIV — Le Quatorzième Jour. FPS cel-shadé en vignettes de bande dessinée, dans le navigateur.",
+  "keywords": [
+    "fps",
+    "cel-shading",
+    "three.js",
+    "webgl",
+    "comic",
+    "game",
+    "typescript"
+  ],
+  "license": "MIT",
+  "author": "Benoit Bacot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benoitbac/XIV.git"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dashboard": "node tools/dashboard/server.mjs",
+    "verify": "npm run typecheck && npm run format:check && npm run test"
+  },
+  "dependencies": {
+    "@fontsource/bangers": "^5.3.0",
+    "@fontsource/oswald": "^5.3.0",
+    "@fontsource/special-elite": "^5.3.0",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/three": "^0.185.1",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vite-plugin-checker": "^0.14.5",
+    "vitest": "^4.1.10"
+  }
+}

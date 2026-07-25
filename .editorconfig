@@ -1,0 +1,31 @@
+# EditorConfig — shared coding style for the Quark ecosystem
+# https://editorconfig.org
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+# TypeScript / JavaScript — Prettier is the enforcer, this only sets the basics
+# so an editor opening a fresh checkout does the right thing before it runs.
+[*.{ts,tsx,js,mjs,cjs}]
+indent_size = 2
+max_line_length = 100
+
+[*.{css,html}]
+indent_size = 2
+
+# GLSL lives inside tagged template literals in .ts files; standalone shaders
+# follow the same two-space rule.
+[*.{glsl,vert,frag}]
+indent_size = 2

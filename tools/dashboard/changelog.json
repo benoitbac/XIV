@@ -1,0 +1,63 @@
+{
+  "updated": "2026-07-25",
+  "focus": "Le chapitre un est jouable de bout en bout. Ce qui manque n'est plus du moteur mais du contenu : un deuxième niveau, et des civils à ne pas abattre.",
+  "narrative": "XIV part d'une contrainte simple : reproduire la sensation d'un album de bande dessinée jouable, sans studio et sans assets achetés. D'où trois partis pris qui structurent tout le reste — le trait est calculé en post-traitement plutôt que dessiné (Sobel sur profondeur et normales, avec un tremblement à 11 images/seconde qui imite l'encrage à la main) ; le son est entièrement synthétisé à l'exécution, ce qui met le jeu complet sous 700 ko ; et les vignettes incrustées ne sont pas des icônes mais un vrai second rendu du monde, gelé à l'instant du coup de feu. Le moteur est là. L'histoire aussi : cinq souvenirs, trois documents, une conspiration à quatorze noms.",
+  "history": [
+    { "label": "départ", "done": 0 },
+    { "label": "socle technique", "done": 6 },
+    { "label": "combat & IA", "done": 12 },
+    { "label": "vignettes BD", "done": 16 },
+    { "label": "chapitre un", "done": 21 },
+    { "label": "industrialisation", "done": 26 }
+  ],
+  "goal": 32,
+  "sessions": [
+    {
+      "date": "2026-07-25",
+      "title": "S0–S4 · Du fichier vide au chapitre jouable",
+      "items": [
+        {
+          "tag": "T0.2",
+          "status": "done",
+          "text": "Pipeline d'encrage en trois passes : couleur toon, normales en espace vue, puis un Sobel qui croise les deux. La profondeur seule rate les plis intérieurs, les normales seules bavent au loin — le seuil de profondeur est normalisé par la distance et les plis sont atténués au-delà de 50 m, sinon la neige scintille."
+        },
+        {
+          "tag": "T0.5",
+          "status": "done",
+          "text": "Collisions résolues axe par axe façon Quake, avec sonde de sol à 12 cm. Sans cette sonde, descendre une pente en escalier déclenche une frame de chute à chaque marche et la caméra tremble."
+        },
+        {
+          "tag": "T0.6",
+          "status": "done",
+          "text": "Audio synthétisé : chaque tir est une salve de bruit filtrée plus une fondamentale qui descend, avec un décalage de lecture aléatoire dans le buffer de bruit — sans ça, deux tirs d'affilée sonnent identiques et l'oreille l'entend tout de suite."
+        },
+        {
+          "tag": "T1.4",
+          "status": "done",
+          "text": "IA à cinq états. Le point qui fait la différence n'est pas la machine à états mais le délai de réaction : un garde qui vous voit ne tire pas, il vous fixe pendant 0,3 à 0,55 s. C'est ce qui rend l'accroupissement utile (le compteur monte 45 % moins vite)."
+        },
+        {
+          "tag": "T2.1",
+          "status": "done",
+          "text": "Les vignettes rendent la scène depuis une seconde caméra à travers le même pipeline, puis lisent les pixels en retour. C'est un blocage GPU d'environ 2 ms, donc c'est strictement limité aux événements discrets et cadencé à une case par 1,1 s maximum."
+        },
+        {
+          "tag": "T4.1",
+          "status": "done",
+          "text": "26 tests. Le plus utile a trouvé un vrai bug : la marche d'escalier montait bien mais ne redescendait pas dans la même frame — corrigé, et le test simule maintenant une demi-seconde de marche plutôt qu'un seul pas."
+        }
+      ]
+    }
+  ],
+  "next": [
+    { "text": "T4.6 — budget image mesuré et compteur de draw calls affichable en jeu" },
+    { "text": "T5.1 — niveau 02 « Casier 14 », gare de Denver" },
+    {
+      "text": "T5.2 — PNJ civils et malus de tir dans la foule",
+      "blocked": "dépend de T5.1 (il faut un lieu peuplé avant de peupler quoi que ce soit)"
+    },
+    {
+      "text": "Passer les niveaux de TypeScript à des données JSON, pour ouvrir la voie à un éditeur"
+    }
+  ]
+}

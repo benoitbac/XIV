@@ -1,0 +1,58 @@
+name: Release
+
+# Package the built game as a self-contained archive anyone can unzip and serve
+# from a static host, and attach it to a GitHub Release. Triggered by pushing a
+# semver tag (e.g. `v0.1.0`); also runnable manually, in which case the archive
+# is uploaded to the run instead of a release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed to create/update the GitHub Release
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run verify
+      - run: npm run build
+
+      - name: Resolve version
+        id: version
+        run: echo "value=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # Built with a relative base so the archive works from any subdirectory,
+      # unlike the Pages build which is pinned to /XIV/.
+      - name: Rebuild with a relative base
+        run: npx vite build --base=./
+
+      - name: Archive
+        run: |
+          mkdir -p artifacts
+          tar -czf "artifacts/xiv-${{ steps.version.outputs.value }}-web.tar.gz" -C dist .
+          (cd dist && zip -qr "../artifacts/xiv-${{ steps.version.outputs.value }}-web.zip" .)
+
+      - name: Upload to the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiv-web
+          path: artifacts/
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+          fail_on_unmatched_files: false
+          generate_release_notes: true

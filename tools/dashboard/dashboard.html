@@ -1,0 +1,922 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XIV · cockpit</title>
+    <style>
+      /* -------------------------------------------------------------------
+         Jetons de design. Fond encre, accents jaune/rouge repris de la
+         planche : le cockpit et le jeu doivent avoir la même voix.
+         ------------------------------------------------------------------- */
+      :root {
+        --bg: #0b0a09;
+        --bg-1: #131110;
+        --bg-2: #1a1715;
+        --line: #2a2522;
+        --line-strong: #3d3631;
+        --txt: #ece3d2;
+        --txt-soft: #9c9184;
+        --txt-faint: #625950;
+        --ink: #141210;
+        --yellow: #e9bb3c;
+        --red: #c4322a;
+        --green: #4fae7c;
+        --blue: #4f90b8;
+        --amber: #d99a2b;
+        --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+        --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        background-image:
+          radial-gradient(900px 480px at 88% -12%, rgba(233, 187, 60, 0.07), transparent),
+          radial-gradient(700px 420px at 0% 0%, rgba(196, 50, 42, 0.06), transparent);
+        color: var(--txt);
+        font-family: var(--mono);
+        font-size: 12px;
+        min-height: 100vh;
+      }
+
+      a {
+        color: var(--blue);
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--line-strong);
+        border-radius: 4px;
+      }
+
+      /* --- chrome ------------------------------------------------------- */
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(11, 10, 9, 0.85);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(6px);
+      }
+
+      .brand {
+        font-family: var(--sans);
+        font-weight: 800;
+        font-size: 15px;
+        letter-spacing: 0.16em;
+      }
+      .brand .n {
+        color: var(--yellow);
+      }
+      .brand .tag {
+        margin-left: 8px;
+        font-size: 9px;
+        letter-spacing: 0.28em;
+        color: var(--txt-faint);
+        border: 1px solid var(--line-strong);
+        padding: 2px 6px;
+        vertical-align: middle;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        color: var(--txt-soft);
+        border: 1px solid var(--line);
+        padding: 3px 8px;
+        border-radius: 999px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--txt-faint);
+        display: inline-block;
+      }
+      .dot.ok {
+        background: var(--green);
+      }
+      .dot.warn {
+        background: var(--amber);
+      }
+      .dot.bad {
+        background: var(--red);
+      }
+
+      @keyframes pulseRing {
+        0% {
+          box-shadow: 0 0 0 0 rgba(79, 174, 124, 0.5);
+        }
+        70% {
+          box-shadow: 0 0 0 9px rgba(79, 174, 124, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(79, 174, 124, 0);
+        }
+      }
+      .pulse {
+        animation: pulseRing 1.8s infinite;
+      }
+
+      .spacer {
+        margin-left: auto;
+      }
+
+      .legend {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: 8px 24px;
+        border-bottom: 1px solid var(--line);
+        font-size: 10px;
+        color: var(--txt-faint);
+      }
+      .legend b {
+        font-weight: 500;
+      }
+
+      main {
+        padding: 22px 24px 60px;
+        display: grid;
+        gap: 22px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      section {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: linear-gradient(180deg, var(--bg-1), rgba(0, 0, 0, 0.35));
+        padding: 18px 20px;
+      }
+
+      h2 {
+        font-family: var(--sans);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        margin: 0 0 4px;
+      }
+
+      .sub {
+        color: var(--txt-faint);
+        font-size: 10.5px;
+        margin: 0 0 16px;
+      }
+
+      /* --- hero --------------------------------------------------------- */
+
+      .hero {
+        border-color: rgba(233, 187, 60, 0.25);
+        background: linear-gradient(180deg, rgba(233, 187, 60, 0.05), rgba(0, 0, 0, 0.4));
+      }
+      .hero__numeral {
+        font-family: var(--sans);
+        font-weight: 900;
+        font-size: 46px;
+        line-height: 1;
+        letter-spacing: 0.04em;
+        color: var(--txt);
+        text-shadow: 3px 3px 0 var(--red);
+      }
+      .hero__epic {
+        font-family: var(--sans);
+        font-size: 15px;
+        font-weight: 600;
+        margin: 12px 0 6px;
+      }
+      .hero__goal,
+      .hero__narrative {
+        color: var(--txt-soft);
+        line-height: 1.75;
+        max-width: 105ch;
+        margin: 0 0 10px;
+      }
+      .hero__focus {
+        border-left: 3px solid var(--yellow);
+        padding-left: 12px;
+        color: var(--txt);
+        line-height: 1.7;
+        max-width: 105ch;
+      }
+      .hero__stats {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+      .kpi {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 12px;
+        min-width: 104px;
+        background: rgba(0, 0, 0, 0.25);
+      }
+      .kpi__v {
+        font-family: var(--sans);
+        font-size: 19px;
+        font-weight: 700;
+      }
+      .kpi__l {
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--txt-faint);
+      }
+
+      /* --- gantt / burn-up ---------------------------------------------- */
+
+      .scroll {
+        overflow-x: auto;
+      }
+      svg text {
+        font-family: var(--mono);
+      }
+
+      .chips {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        font-size: 10px;
+        color: var(--txt-soft);
+        margin-bottom: 10px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .swatch {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        display: inline-block;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: minmax(300px, 360px) 1fr;
+        gap: 22px;
+      }
+      @media (max-width: 900px) {
+        .split {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .journal {
+        display: grid;
+        gap: 10px;
+      }
+      .entry {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: rgba(0, 0, 0, 0.22);
+      }
+      .entry__head {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .entry__date {
+        color: var(--yellow);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+      .entry__title {
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 12px;
+      }
+      .item {
+        display: grid;
+        grid-template-columns: 46px 1fr;
+        gap: 10px;
+        padding: 5px 0;
+        border-top: 1px dashed var(--line);
+        line-height: 1.7;
+        color: var(--txt-soft);
+      }
+      .item .tag {
+        color: var(--txt-faint);
+        font-size: 10px;
+      }
+      .item.done .tag {
+        color: var(--green);
+      }
+
+      .next li {
+        margin-bottom: 8px;
+        line-height: 1.7;
+        color: var(--txt-soft);
+      }
+      .blocked {
+        color: var(--red);
+        font-size: 10px;
+        display: block;
+      }
+
+      /* --- system map ---------------------------------------------------- */
+
+      .layer {
+        margin-bottom: 14px;
+      }
+      .layer__name {
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: var(--yellow);
+        margin-bottom: 8px;
+      }
+      .layer__name span {
+        color: var(--txt-faint);
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 10px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: rgba(0, 0, 0, 0.25);
+        transition:
+          border-color 160ms,
+          box-shadow 160ms;
+      }
+      .card__title {
+        font-family: var(--sans);
+        font-weight: 600;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .card__path {
+        color: var(--txt-faint);
+        font-size: 10px;
+        margin: 3px 0 6px;
+      }
+      .card__role {
+        color: var(--txt-soft);
+        line-height: 1.6;
+        font-size: 11px;
+      }
+      .card__ports {
+        margin-top: 7px;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .port {
+        font-size: 9px;
+        color: var(--txt-faint);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 1px 7px;
+      }
+      .card__metrics {
+        margin-top: 8px;
+        display: flex;
+        gap: 12px;
+        font-size: 10px;
+        color: var(--txt-faint);
+      }
+      .card__metrics b {
+        color: var(--txt);
+        font-weight: 600;
+      }
+
+      .card-active {
+        border-color: var(--green);
+        box-shadow: 0 0 22px -8px rgba(79, 174, 124, 0.45);
+      }
+      .card-recent {
+        border-color: var(--amber);
+        box-shadow: 0 0 22px -12px rgba(217, 154, 43, 0.4);
+      }
+      .card-error {
+        border-color: var(--red);
+      }
+
+      .edges {
+        margin-top: 12px;
+        display: grid;
+        gap: 4px;
+        font-size: 10.5px;
+        color: var(--txt-soft);
+      }
+      .edges .arrow {
+        color: var(--txt-faint);
+      }
+      .conflict {
+        border-left: 3px solid var(--amber);
+        padding-left: 10px;
+        margin-top: 8px;
+        color: var(--txt-soft);
+        line-height: 1.6;
+      }
+
+      /* --- audit --------------------------------------------------------- */
+
+      .audit {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .score {
+        font-family: var(--sans);
+        font-size: 40px;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .checks {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 6px;
+        flex: 1;
+        min-width: 280px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 9px;
+        font-size: 11px;
+      }
+      .check.ok {
+        border-color: rgba(79, 174, 124, 0.4);
+      }
+      .check.bad {
+        border-color: rgba(196, 50, 42, 0.5);
+        color: var(--red);
+      }
+
+      footer {
+        padding: 0 24px 30px;
+        max-width: 1400px;
+        margin: 0 auto;
+        color: var(--txt-faint);
+        font-size: 10px;
+        line-height: 1.8;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="brand"
+        ><span class="n">XIV</span> · COCKPIT<span class="tag">SUIVI PROJET</span></span
+      >
+      <span class="pill"><span class="dot" id="dot"></span><span id="state">connexion…</span></span>
+      <span class="pill" id="branch">—</span>
+      <span class="pill" id="wip">—</span>
+      <span class="pill" id="commit">—</span>
+      <span class="spacer"></span>
+      <span class="pill" id="clock">—</span>
+    </header>
+
+    <div class="legend">
+      <span><b style="color: var(--txt-soft)">Comment lire :</b></span>
+      <span><b style="color: var(--green)">● en cours</b> = fichier édité il y a &lt; 3 min</span>
+      <span><b style="color: var(--amber)">◐ récent</b> = activité &lt; 10 min</span>
+      <span><b style="color: var(--txt-faint)">○ au repos</b> = rien de récent</span>
+      <span
+        ><b style="color: var(--amber)">WIP:n</b> = n fichiers modifiés pas encore commités</span
+      >
+      <span><b style="color: var(--blue)">↑n</b> = n commits pas encore poussés</span>
+    </div>
+
+    <main>
+      <section class="hero">
+        <div class="hero__numeral">XIV</div>
+        <div class="hero__epic" id="epic">—</div>
+        <p class="hero__goal" id="goal"></p>
+        <p class="hero__narrative" id="narrative"></p>
+        <p class="hero__focus" id="focus"></p>
+        <div class="hero__stats" id="kpis"></div>
+      </section>
+
+      <section>
+        <h2>🗺️ Feuille de route</h2>
+        <p class="sub">
+          Une barre par tâche, groupée par sprint. Les tâches n'ont pas de dates propres : la barre
+          est déduite en découpant la durée du sprint par index, ce qui donne l'ordre sans mentir
+          sur des échéances qu'on n'a pas fixées.
+        </p>
+        <div class="chips" id="gantt-legend"></div>
+        <div class="scroll" id="gantt"></div>
+      </section>
+
+      <section>
+        <h2>📈 Suivi du projet</h2>
+        <p class="sub">Tâches terminées cumulées, journal de session, et ce qui vient ensuite.</p>
+        <div class="split">
+          <div>
+            <div id="burnup"></div>
+            <h2 style="margin-top: 18px">Ensuite</h2>
+            <ul class="next" id="next"></ul>
+            <h2 style="margin-top: 18px">Réserve</h2>
+            <ul class="next" id="backlog"></ul>
+          </div>
+          <div class="journal" id="journal"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>🧩 Carte système</h2>
+        <p class="sub" id="system-summary"></p>
+        <div id="system"></div>
+        <div class="edges" id="edges"></div>
+        <div id="conflicts"></div>
+      </section>
+
+      <section>
+        <h2>🔍 Audit des pratiques</h2>
+        <p class="sub">
+          Les huit conventions du dépôt, vérifiées par le serveur à chaque instantané. Le dashboard
+          s'audite lui-même : si un fichier disparaît, la case passe au rouge ici.
+        </p>
+        <div class="audit">
+          <div>
+            <div class="score" id="score">—</div>
+            <div class="kpi__l" id="score-label">conformité</div>
+          </div>
+          <div class="checks" id="checks"></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>⚙️ Sous-systèmes</h2>
+        <p class="sub">
+          Scan du dépôt en direct : taille de chaque brique et date de dernière édition.
+          <span id="totals"></span>
+        </p>
+        <div class="grid" id="bricks"></div>
+      </section>
+    </main>
+
+    <footer>
+      Cockpit local, non déployé — <code>npm run dashboard</code>. Les données viennent de trois
+      fichiers déclaratifs (<code>sprints.json</code>, <code>changelog.json</code>,
+      <code>system.json</code>) plus un scan git + système de fichiers poussé en SSE toutes les 4 s.
+    </footer>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) =>
+        String(s ?? '').replace(
+          /[&<>"']/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+        );
+
+      const TASK_STATES = [
+        { key: 'done', label: 'fait', color: '#4fae7c', opacity: 1 },
+        { key: 'doing', label: 'en cours', color: '#e9bb3c', opacity: 1 },
+        { key: 'todo', label: 'à faire', color: '#4f90b8', opacity: 0.5 },
+        { key: 'blocked', label: 'bloqué', color: '#c4322a', opacity: 0.6 },
+      ];
+      const stateOf = (key) => TASK_STATES.find((s) => s.key === key) ?? TASK_STATES[2];
+
+      const iso = (ms) => {
+        const d = new Date(ms);
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+      };
+      const ago = (ms) => {
+        if (!ms) return '—';
+        const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+        if (s < 60) return `il y a ${s} s`;
+        if (s < 3600) return `il y a ${Math.round(s / 60)} min`;
+        if (s < 86400) return `il y a ${Math.round(s / 3600)} h`;
+        return `il y a ${Math.round(s / 86400)} j`;
+      };
+
+      // ---------------------------------------------------------------------
+      // Gantt SVG fait main — pas de librairie de graphes dans ce dépôt.
+      // ---------------------------------------------------------------------
+      function renderGantt(roadmap) {
+        const rows = [];
+        let tMin = Infinity;
+        let tMax = -Infinity;
+
+        for (const sprint of roadmap.sprints ?? []) {
+          const s0 = Date.parse(sprint.start);
+          const s1 = Date.parse(sprint.end);
+          if (Number.isNaN(s0) || Number.isNaN(s1)) continue;
+          tMin = Math.min(tMin, s0);
+          tMax = Math.max(tMax, s1);
+
+          rows.push({ kind: 'sprint', label: `${sprint.id} · ${sprint.title}`, a: s0, b: s1 });
+
+          const tasks = sprint.tasks ?? [];
+          const span = Math.max(s1 - s0, 1);
+          tasks.forEach((task, i) => {
+            const a = task.start ? Date.parse(task.start) : s0 + (span * i) / tasks.length;
+            const b = task.end ? Date.parse(task.end) : s0 + (span * (i + 1)) / tasks.length;
+            rows.push({ kind: 'task', label: task.title, a, b, status: task.status, id: task.id });
+          });
+        }
+
+        if (!rows.length) return '<p class="sub">Aucun sprint daté.</p>';
+
+        // Une journée de marge de part et d'autre, sinon les barres touchent le cadre.
+        const day = 86400000;
+        tMin -= day / 2;
+        tMax += day / 2;
+
+        const W = 1040;
+        const leftLabel = 300;
+        const rightPad = 18;
+        const topAxis = 34;
+        const rowH = 15;
+        const rowGap = 6;
+        const innerW = W - leftLabel - rightPad;
+        const totalMs = Math.max(tMax - tMin, 1);
+        const H = topAxis + rows.length * (rowH + rowGap) + 16;
+        const x = (ms) => leftLabel + ((ms - tMin) / totalMs) * innerW;
+
+        let g = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Feuille de route">`;
+
+        // Grille hebdomadaire + étiquettes de jour.
+        const firstTick = Math.ceil(tMin / day) * day;
+        for (let t = firstTick; t <= tMax; t += day) {
+          const gx = x(t);
+          g += `<line x1="${gx}" y1="${topAxis - 8}" x2="${gx}" y2="${H - 6}" stroke="#2a2522" stroke-dasharray="3 4"/>`;
+          g += `<text x="${gx + 3}" y="${topAxis - 12}" fill="#625950" style="font-size:9px">${iso(t)}</text>`;
+        }
+
+        const now = Date.now();
+        if (now >= tMin && now <= tMax) {
+          const tx = x(now);
+          g += `<line x1="${tx}" y1="${topAxis - 8}" x2="${tx}" y2="${H - 6}" stroke="#e9bb3c" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+          g += `<text x="${tx + 4}" y="${topAxis - 22}" fill="#e9bb3c" style="font-size:9px;font-weight:700;letter-spacing:.12em">AUJOURD’HUI</text>`;
+        }
+
+        rows.forEach((r, i) => {
+          const y = topAxis + i * (rowH + rowGap);
+          const x1 = x(r.a);
+          // Largeur plancher : un sprint d'une journée doit rester cliquable.
+          const x2 = Math.max(x(r.b), x1 + 7);
+
+          if (r.kind === 'sprint') {
+            g += `<rect x="${leftLabel - 8}" y="${y - 3}" width="${innerW + 26}" height="${rowH + 6}" fill="rgba(233,187,60,0.05)"/>`;
+            g += `<text x="8" y="${y + 11}" fill="#ece3d2" style="font-size:10px;font-weight:700">${esc(r.label)}</text>`;
+            g += `<rect x="${x1}" y="${y + 5}" width="${x2 - x1}" height="4" rx="2" fill="#3d3631"/>`;
+            return;
+          }
+
+          const st = stateOf(r.status);
+          const label = r.label.length > 44 ? `${r.label.slice(0, 43)}…` : r.label;
+          g += `<text x="22" y="${y + 11}" fill="#9c9184" style="font-size:9.5px">${esc(r.id)} ${esc(label)}</text>`;
+          g += `<rect x="${x1}" y="${y}" width="${x2 - x1}" height="${rowH}" rx="3" ry="3" fill="${st.color}" fill-opacity="${st.opacity}"><title>${esc(r.label)} — ${st.label} (${iso(r.a)} → ${iso(r.b)})</title></rect>`;
+        });
+
+        return `${g}</svg>`;
+      }
+
+      // ---------------------------------------------------------------------
+      // Burn-up SVG fait main.
+      // ---------------------------------------------------------------------
+      function renderBurnup(changelog) {
+        const history = changelog.history ?? [];
+        if (history.length < 2) return '';
+        const goal = changelog.goal ?? Math.max(...history.map((h) => h.done));
+
+        const W = 340;
+        const H = 110;
+        const pad = { l: 26, r: 12, t: 12, b: 22 };
+        const iw = W - pad.l - pad.r;
+        const ih = H - pad.t - pad.b;
+        const max = Math.max(goal, ...history.map((h) => h.done)) || 1;
+        const px = (i) => pad.l + (i / (history.length - 1)) * iw;
+        const py = (v) => pad.t + ih - (v / max) * ih;
+
+        const line = history.map((h, i) => `${px(i)},${py(h.done)}`).join(' ');
+        const area = `${pad.l},${py(0)} ${line} ${px(history.length - 1)},${py(0)}`;
+
+        let g = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Burn-up">`;
+        g += `<polygon points="${area}" fill="#4fae7c22"/>`;
+        g += `<polyline points="${line}" fill="none" stroke="#4fae7c" stroke-width="2"/>`;
+        g += `<line x1="${pad.l}" y1="${py(goal)}" x2="${W - pad.r}" y2="${py(goal)}" stroke="#e9bb3c" stroke-dasharray="4 4"/>`;
+        g += `<text x="${W - pad.r}" y="${py(goal) - 4}" text-anchor="end" fill="#e9bb3c" style="font-size:9px">objectif ${goal}</text>`;
+
+        history.forEach((h, i) => {
+          g += `<circle cx="${px(i)}" cy="${py(h.done)}" r="3" fill="#4fae7c"><title>${esc(h.label)} — ${h.done} tâches</title></circle>`;
+          if (i === 0 || i === history.length - 1) {
+            g += `<text x="${px(i)}" y="${H - 6}" text-anchor="${i === 0 ? 'start' : 'end'}" fill="#625950" style="font-size:9px">${esc(h.label)}</text>`;
+          }
+        });
+        return `${g}</svg>`;
+      }
+
+      // ---------------------------------------------------------------------
+      // Rendu des sections déclaratives
+      // ---------------------------------------------------------------------
+      async function loadDeclarative() {
+        const [roadmap, changelog, system] = await Promise.all(
+          ['/api/roadmap', '/api/changelog', '/api/system'].map((u) =>
+            fetch(u).then((r) => (r.ok && r.status !== 204 ? r.json() : null)),
+          ),
+        );
+
+        if (roadmap) {
+          $('epic').textContent = roadmap.epic ?? '';
+          $('goal').textContent = roadmap.goal ?? '';
+          $('gantt').innerHTML = renderGantt(roadmap);
+          $('gantt-legend').innerHTML = TASK_STATES.map(
+            (s) =>
+              `<span class="chip"><span class="swatch" style="background:${s.color};opacity:${s.opacity}"></span>${s.label}</span>`,
+          ).join('');
+
+          const all = (roadmap.sprints ?? []).flatMap((s) => s.tasks ?? []);
+          const done = all.filter((t) => t.status === 'done').length;
+          $('kpis').innerHTML = [
+            ['tâches faites', `${done}/${all.length}`],
+            ['sprints', String((roadmap.sprints ?? []).length)],
+            ['réserve', String((roadmap.backlog ?? []).length)],
+            ['mis à jour', roadmap.updated ?? '—'],
+          ]
+            .map(
+              ([l, v]) =>
+                `<div class="kpi"><div class="kpi__v">${esc(v)}</div><div class="kpi__l">${esc(l)}</div></div>`,
+            )
+            .join('');
+
+          $('backlog').innerHTML = (roadmap.backlog ?? [])
+            .map(
+              (b) =>
+                `<li><b style="color:var(--txt)">${esc(b.title)}</b><br><span style="color:var(--txt-faint)">${esc(b.note ?? '')}</span></li>`,
+            )
+            .join('');
+        }
+
+        if (changelog) {
+          $('narrative').textContent = changelog.narrative ?? '';
+          $('focus').textContent = changelog.focus ?? '';
+          $('burnup').innerHTML = renderBurnup(changelog);
+          $('journal').innerHTML = (changelog.sessions ?? [])
+            .map(
+              (s) => `<article class="entry">
+                <div class="entry__head">
+                  <span class="entry__date">${esc(s.date)}</span>
+                  <span class="entry__title">${esc(s.title)}</span>
+                </div>
+                ${(s.items ?? [])
+                  .map(
+                    (i) =>
+                      `<div class="item ${esc(i.status)}"><span class="tag">${esc(i.tag ?? '')}</span><span>${esc(i.text)}</span></div>`,
+                  )
+                  .join('')}
+              </article>`,
+            )
+            .join('');
+          $('next').innerHTML = (changelog.next ?? [])
+            .map(
+              (n) =>
+                `<li>${esc(n.text)}${n.blocked ? `<span class="blocked">⛔ bloqué par : ${esc(n.blocked)}</span>` : ''}</li>`,
+            )
+            .join('');
+        }
+
+        if (system) {
+          $('system-summary').textContent = `${system.summary ?? ''} — ${system.stack ?? ''}`;
+          $('system').innerHTML = (system.layers ?? [])
+            .map(
+              (layer) => `<div class="layer">
+                <div class="layer__name">${esc(layer.name)} <span>— ${esc(layer.desc ?? '')}</span></div>
+                <div class="grid">
+                  ${(layer.bricks ?? [])
+                    .map(
+                      (b) => `<div class="card">
+                        <div class="card__title">${esc(b.title ?? b.name)}</div>
+                        <div class="card__path">${esc(b.path ?? '')}</div>
+                        <div class="card__role">${esc(b.role ?? '')}</div>
+                        <div class="card__ports">${(b.ports ?? []).map((p) => `<span class="port">${esc(p)}</span>`).join('')}</div>
+                        ${b.dashboard ? `<div class="card__metrics"><a href="${esc(b.dashboard)}">${esc(b.dashboard)}</a></div>` : ''}
+                      </div>`,
+                    )
+                    .join('')}
+                </div>
+              </div>`,
+            )
+            .join('');
+
+          $('edges').innerHTML = (system.edges ?? [])
+            .map(
+              (e) =>
+                `<div><b style="color:var(--txt)">${esc(e.from)}</b> <span class="arrow">→</span> <b style="color:var(--txt)">${esc(e.to)}</b> <span style="color:var(--txt-faint)">${esc(e.label ?? '')}</span></div>`,
+            )
+            .join('');
+
+          $('conflicts').innerHTML = (system.conflicts ?? [])
+            .map(
+              (c) =>
+                `<div class="conflict"><b style="color:var(--amber)">${esc(c.port)}</b> — ${esc(c.note)}</div>`,
+            )
+            .join('');
+        }
+      }
+
+      // ---------------------------------------------------------------------
+      // Instantané live
+      // ---------------------------------------------------------------------
+      const CHECK_LABELS = {
+        Readme: 'README.md',
+        Gitignore: '.gitignore',
+        Arch: 'docs/ARCHITECTURE.md',
+        License: 'LICENSE',
+        EditorConfig: '.editorconfig',
+        Ci: 'CI GitHub Actions',
+        Tests: 'tests unitaires',
+        Remote: 'remote git',
+      };
+
+      function render(snap) {
+        const v = snap.vcs;
+        $('branch').textContent = `⎇ ${v.branch}`;
+        $('wip').innerHTML =
+          `<span style="color:${v.dirty ? 'var(--amber)' : 'var(--txt-faint)'}">WIP:${v.dirty}</span>&nbsp;<span style="color:${v.ahead ? 'var(--blue)' : 'var(--txt-faint)'}">↑${v.ahead}</span>`;
+        $('commit').textContent = v.lastCommit
+          ? `${v.lastCommit.hash} · ${v.lastCommit.subject.slice(0, 52)} · ${ago(v.lastCommit.at)}`
+          : 'aucun commit';
+        $('clock').textContent = new Date(snap.at).toLocaleTimeString('fr-FR');
+
+        const p = snap.practices;
+        $('score').textContent = `${p.score}%`;
+        $('score').style.color =
+          p.score === 100 ? 'var(--green)' : p.score >= 75 ? 'var(--amber)' : 'var(--red)';
+        $('score-label').textContent = `${p.passed}/${p.total} conventions · ${p.testCount} tests`;
+        $('checks').innerHTML = Object.entries(p.checks)
+          .map(
+            ([k, ok]) =>
+              `<div class="check ${ok ? 'ok' : 'bad'}"><span class="dot ${ok ? 'ok' : 'bad'}"></span>${esc(CHECK_LABELS[k] ?? k)}</div>`,
+          )
+          .join('');
+
+        $('totals').textContent =
+          ` ${snap.totals.files} fichiers · ${snap.totals.lines.toLocaleString('fr-FR')} lignes.`;
+        $('bricks').innerHTML = snap.bricks
+          .map(
+            (b) => `<div class="card card-${b.state}">
+              <div class="card__title"><span class="dot ${b.state === 'active' ? 'ok pulse' : b.state === 'recent' ? 'warn' : b.state === 'error' ? 'bad' : ''}"></span>${esc(b.name)}</div>
+              <div class="card__path">${esc(b.path)}</div>
+              <div class="card__role">${esc(b.role)}</div>
+              <div class="card__metrics">
+                <span><b>${b.files}</b> fichiers</span>
+                <span><b>${b.lines.toLocaleString('fr-FR')}</b> lignes</span>
+                <span>${ago(b.touchedAt)}</span>
+              </div>
+            </div>`,
+          )
+          .join('');
+      }
+
+      function connect() {
+        const es = new EventSource('/events');
+        es.onopen = () => {
+          $('dot').className = 'dot ok pulse';
+          $('state').textContent = 'live';
+        };
+        es.onmessage = (e) => {
+          try {
+            render(JSON.parse(e.data));
+          } catch {
+            /* un instantané malformé ne doit pas casser la page */
+          }
+        };
+        es.onerror = () => {
+          $('dot').className = 'dot warn';
+          $('state').textContent = 'reconnexion…';
+        };
+      }
+
+      loadDeclarative();
+      connect();
+    </script>
+  </body>
+</html>
