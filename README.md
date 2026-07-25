@@ -94,7 +94,7 @@ sont limitées à une par seconde — sont dans [`docs/ARCHITECTURE.md`](docs/AR
 ```bash
 npm install
 npm run dev
-# → http://localhost:5173
+# → http://localhost:5114
 ```
 
 ```bash

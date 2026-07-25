@@ -23,7 +23,15 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    // Port dédié plutôt que le 5173 par défaut, que se disputent tous les
+    // projets Vite. `strictPort` fait échouer bruyamment si quelqu'un l'occupe,
+    // au lieu de glisser sur un port au hasard et de servir la mauvaise page.
+    port: 5114,
+    strictPort: true,
     host: true,
+  },
+  preview: {
+    port: 5115,
+    strictPort: true,
   },
 });

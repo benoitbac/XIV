@@ -10,7 +10,7 @@ used across the **Quark** ecosystem, adapted to a TypeScript/WebGL stack.
 2. Install and run the game:
    ```bash
    npm install
-   npm run dev          # → http://localhost:5173
+   npm run dev          # → http://localhost:5114
    ```
 3. Make your change. Keep commits focused and the working tree green.
 4. Run the full gate locally before pushing:
