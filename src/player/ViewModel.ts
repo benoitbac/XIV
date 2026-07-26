@@ -1,167 +1,37 @@
-import { BoxGeometry, CylinderGeometry, Group, Mesh, Object3D, Vector3 } from 'three';
-import { PALETTE } from '../render/palette.ts';
-import { toon } from '../render/toon.ts';
+import { Group, Mesh, Object3D, Vector3 } from 'three';
 import { clamp, damp } from '../core/mathx.ts';
 import type { WeaponId } from './weapons.ts';
-
-const gun = toon(PALETTE.steelDark, { ramp: 'trio' });
-const gunLight = toon(PALETTE.steel, { ramp: 'trio' });
-const grip = toon(PALETTE.woodDark, { ramp: 'trio' });
-const skin = toon(0xd9a877, { ramp: 'trio' });
-const glove = toon(0x2f3742, { ramp: 'trio' });
-
-function box(w: number, h: number, d: number, material = gun): Mesh {
-  return new Mesh(new BoxGeometry(w, h, d), material);
-}
-
-function at(mesh: Mesh, x: number, y: number, z: number): Mesh {
-  mesh.position.set(x, y, z);
-  return mesh;
-}
-
-/** A pair of blocky hands, so the weapon doesn't float in a void. */
-function hands(): Group {
-  const g = new Group();
-  const right = at(box(0.075, 0.075, 0.12, glove), 0.012, -0.075, 0.055);
-  const left = at(box(0.07, 0.07, 0.11, glove), -0.055, -0.06, -0.02);
-  left.rotation.y = 0.3;
-  const thumb = at(box(0.03, 0.03, 0.055, skin), 0.045, -0.045, 0.02);
-  g.add(right, left, thumb);
-  return g;
-}
-
-function buildColt(): Group {
-  const g = new Group();
-  g.add(at(box(0.05, 0.055, 0.26), 0, 0, -0.06)); // slide
-  g.add(at(box(0.044, 0.03, 0.2, gunLight), 0, -0.042, -0.045)); // frame
-  const handle = at(box(0.046, 0.13, 0.06, grip), 0, -0.11, 0.045);
-  handle.rotation.x = -0.24;
-  g.add(handle);
-  g.add(at(box(0.012, 0.02, 0.012, gunLight), 0, 0.035, -0.175)); // front sight
-  g.add(hands());
-  return g;
-}
-
-function buildSilenced(): Group {
-  const g = new Group();
-  g.add(at(box(0.045, 0.05, 0.22), 0, 0, -0.04));
-  const can = new Mesh(new CylinderGeometry(0.032, 0.032, 0.19, 10), gunLight);
-  can.rotation.x = Math.PI / 2;
-  can.position.set(0, 0.004, -0.24);
-  g.add(can);
-  const handle = at(box(0.042, 0.12, 0.055, grip), 0, -0.1, 0.04);
-  handle.rotation.x = -0.22;
-  g.add(handle);
-  g.add(hands());
-  return g;
-}
-
-function buildSmg(): Group {
-  const g = new Group();
-  g.add(at(box(0.06, 0.075, 0.3), 0, 0, -0.07)); // receiver
-  const barrel = new Mesh(new CylinderGeometry(0.017, 0.017, 0.17, 8), gunLight);
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.012, -0.3);
-  g.add(barrel);
-  g.add(at(box(0.04, 0.17, 0.05, gunLight), 0, -0.12, -0.03)); // magazine
-  const handle = at(box(0.044, 0.11, 0.055, grip), 0, -0.095, 0.075);
-  handle.rotation.x = -0.2;
-  g.add(handle);
-  g.add(at(box(0.035, 0.05, 0.16, gunLight), 0, -0.005, 0.2)); // folding stock
-  g.add(hands());
-  return g;
-}
-
-function buildShotgun(): Group {
-  const g = new Group();
-  const barrel = new Mesh(new CylinderGeometry(0.028, 0.028, 0.42, 10), gun);
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.03, -0.2);
-  g.add(barrel);
-  const pump = new Mesh(new CylinderGeometry(0.034, 0.034, 0.14, 8), grip);
-  pump.rotation.x = Math.PI / 2;
-  pump.position.set(0, -0.025, -0.2);
-  pump.name = 'pump';
-  g.add(pump);
-  g.add(at(box(0.055, 0.075, 0.22, gunLight), 0, -0.005, 0.02)); // receiver
-  const stock = at(box(0.05, 0.1, 0.16, grip), 0, -0.075, 0.16);
-  stock.rotation.x = 0.18;
-  g.add(stock);
-  g.add(hands());
-  return g;
-}
-
-function buildRifle(): Group {
-  const g = new Group();
-  const barrel = new Mesh(new CylinderGeometry(0.016, 0.02, 0.62, 10), gun);
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.025, -0.32);
-  g.add(barrel);
-  g.add(at(box(0.05, 0.07, 0.26, gunLight), 0, 0, -0.02)); // action
-  const stockWood = at(box(0.055, 0.1, 0.46, grip), 0, -0.05, 0.14);
-  stockWood.rotation.x = 0.09;
-  g.add(stockWood);
-  const scope = new Mesh(new CylinderGeometry(0.026, 0.026, 0.22, 10), gun);
-  scope.rotation.x = Math.PI / 2;
-  scope.position.set(0, 0.075, -0.08);
-  scope.name = 'scope';
-  g.add(scope);
-  const bolt = at(box(0.02, 0.02, 0.09, gunLight), 0.04, 0.015, 0.03);
-  bolt.name = 'bolt';
-  g.add(bolt);
-  g.add(hands());
-  return g;
-}
-
-function buildFists(): Group {
-  const g = new Group();
-  const right = at(box(0.1, 0.1, 0.15, glove), 0.05, -0.06, -0.05);
-  right.rotation.set(0.1, -0.25, 0.1);
-  const left = at(box(0.095, 0.095, 0.14, glove), -0.09, -0.11, 0.02);
-  left.rotation.set(0.05, 0.3, -0.1);
-  g.add(right, left);
-  return g;
-}
-
-function buildGrapnel(): Group {
-  const g = new Group();
-  g.add(at(box(0.08, 0.09, 0.16, gunLight), 0, -0.02, -0.04));
-  const spool = new Mesh(new CylinderGeometry(0.05, 0.05, 0.05, 10), gun);
-  spool.rotation.z = Math.PI / 2;
-  spool.position.set(0, 0.03, 0.02);
-  g.add(spool);
-  const hook = at(box(0.02, 0.09, 0.02, gun), 0, 0.02, -0.15);
-  g.add(hook);
-  g.add(hands());
-  return g;
-}
-
-const BUILDERS: Record<WeaponId, () => Group> = {
-  fists: buildFists,
-  colt: buildColt,
-  silenced: buildSilenced,
-  smg: buildSmg,
-  shotgun: buildShotgun,
-  rifle: buildRifle,
-  grapnel: buildGrapnel,
-};
-
-/** Resting offset from the camera, in camera space. */
-const HIP = new Vector3(0.17, -0.16, -0.34);
-const HIP_MELEE = new Vector3(0.2, -0.22, -0.3);
-const AIM = new Vector3(0, -0.075, -0.26);
+import { buildWeaponModel, type WeaponParts } from './weaponModels.ts';
 
 /**
- * The view model: builds a blocky weapon per id and animates the whole feel of
- * holding it — sway from mouse movement, bob from walking, recoil punch,
- * lowering when sprinting, and a reload that actually rotates the gun out of
- * frame instead of just ticking a timer.
+ * The view model.
+ *
+ * Everything the player actually feels about a weapon happens here: how it
+ * lags behind the camera, how it settles after a shot, whether the slide
+ * cycles. The whole point is that the gun is a physical object being carried,
+ * not a decal stuck to the bottom of the screen.
  */
+
+/**
+ * Resting offsets from the camera, in camera space. Sat high enough that the
+ * weapon is comfortably inside the frame on a short viewport — at the bottom
+ * of a letterboxed window a lower rest position clips the gun away entirely.
+ */
+const HIP = new Vector3(0.16, -0.135, -0.36);
+const HIP_MELEE = new Vector3(0.19, -0.19, -0.32);
+const AIM = new Vector3(0, -0.07, -0.28);
+
+interface WeaponRig extends WeaponParts {
+  /** Bind-pose positions, so animated parts can return home exactly. */
+  slideHome: Vector3 | null;
+  magazineHome: Vector3 | null;
+}
+
 export class ViewModel {
   readonly root = new Group();
-  #current: Group | null = null;
+  #current: WeaponRig | null = null;
   #currentId: WeaponId | null = null;
-  readonly #cache = new Map<WeaponId, Group>();
+  readonly #cache = new Map<WeaponId, WeaponRig>();
 
   #swayYaw = 0;
   #swayPitch = 0;
@@ -174,6 +44,8 @@ export class ViewModel {
   #reload = 0;
   #reloadDuration = 0;
   #melee = 0;
+  /** 0..1 cycle of the reciprocating mass; 1 is fully to the rear. */
+  #cycle = 0;
 
   constructor() {
     this.root.name = 'viewmodel';
@@ -183,19 +55,31 @@ export class ViewModel {
   }
 
   get muzzleLocal(): Vector3 {
-    return _muzzle.set(0, 0.02, -0.42);
+    const m = this.#current?.muzzle ?? [0, 0.02, -0.42];
+    return _muzzle.set(m[0], m[1], m[2]);
+  }
+
+  get ejectorLocal(): Vector3 {
+    const e = this.#current?.ejector ?? [0.03, 0.01, 0];
+    return _ejector.set(e[0], e[1], e[2]);
   }
 
   select(id: WeaponId): void {
     if (this.#currentId === id) return;
-    if (this.#current) this.root.remove(this.#current);
-    let g = this.#cache.get(id);
-    if (!g) {
-      g = BUILDERS[id]();
-      this.#cache.set(id, g);
+    if (this.#current) this.root.remove(this.#current.root);
+
+    let rig = this.#cache.get(id);
+    if (!rig) {
+      const parts = buildWeaponModel(id);
+      rig = {
+        ...parts,
+        slideHome: parts.slide ? parts.slide.position.clone() : null,
+        magazineHome: parts.magazine ? parts.magazine.position.clone() : null,
+      };
+      this.#cache.set(id, rig);
     }
-    this.root.add(g);
-    this.#current = g;
+    this.root.add(rig.root);
+    this.#current = rig;
     this.#currentId = id;
     // Draw animation: the weapon rises into frame.
     this.#lower = 1;
@@ -203,6 +87,9 @@ export class ViewModel {
 
   punch(kickback: number): void {
     this.#kickVelocity += kickback * 26;
+    // Cycling the action is what actually reads as "it fired", far more than
+    // the whole model jerking backwards.
+    this.#cycle = 1;
   }
 
   startReload(seconds: number): void {
@@ -245,6 +132,9 @@ export class ViewModel {
     this.#kickVelocity *= Math.exp(-16 * dt);
     this.#kick += this.#kickVelocity * dt;
 
+    // The action cycles fast and returns fast — roughly 60 ms out and back.
+    this.#cycle = Math.max(0, this.#cycle - dt * 16);
+
     if (this.#reload > 0) {
       this.#reload = Math.max(0, this.#reload - dt / this.#reloadDuration);
     }
@@ -285,10 +175,37 @@ export class ViewModel {
       this.#lower * 0.42 + reloadArc * 0.25 + Math.cos(this.#bobPhase) * 0.01 * this.#bobAmount,
     );
 
-    // The pump/bolt actually cycles during a reload — small, but it reads.
-    const cycled = this.#current?.getObjectByName('pump') ?? this.#current?.getObjectByName('bolt');
-    if (cycled)
-      cycled.position.z = (cycled.userData.baseZ ??= cycled.position.z) + reloadArc * 0.09;
+    this.#animateParts(reloadArc);
+  }
+
+  /** Drives the moving parts: slide travel, magazine drop, hammer fall. */
+  #animateParts(reloadArc: number): void {
+    const rig = this.#current;
+    if (!rig) return;
+
+    if (rig.slide && rig.slideHome) {
+      // A shotgun's pump and a rifle's bolt travel further than a pistol slide.
+      const travel =
+        this.#currentId === 'shotgun' ? 0.1 : this.#currentId === 'rifle' ? 0.07 : 0.045;
+      // Out fast, back slower: sin gives the wrong shape, so the return is a
+      // squared falloff.
+      const t = this.#cycle;
+      const out = t > 0.55 ? (1 - t) / 0.45 : t / 0.55;
+      rig.slide.position.z = rig.slideHome.z + out * travel;
+    }
+
+    if (rig.magazine && rig.magazineHome) {
+      // The magazine leaves the well in the first third of the reload and the
+      // fresh one seats in the last third.
+      const drop = reloadArc > 0 ? Math.sin(clamp(this.#reload, 0, 1) * Math.PI) : 0;
+      rig.magazine.position.y = rig.magazineHome.y - drop * 0.22;
+      rig.magazine.position.z = rig.magazineHome.z + drop * 0.05;
+    }
+
+    if (rig.hammer) {
+      // Cocked at rest, dropped the instant the shot breaks.
+      rig.hammer.rotation.x = this.#cycle > 0.1 ? 0.1 : -0.5;
+    }
   }
 
   /** 0 while aiming is idle, 1 when fully sighted — drives the camera FOV. */
@@ -301,8 +218,8 @@ export class ViewModel {
   }
 
   dispose(): void {
-    for (const g of this.#cache.values()) {
-      g.traverse((o) => {
+    for (const rig of this.#cache.values()) {
+      rig.root.traverse((o) => {
         if (o instanceof Mesh) o.geometry.dispose();
       });
     }
@@ -311,4 +228,5 @@ export class ViewModel {
 }
 
 const _muzzle = new Vector3();
+const _ejector = new Vector3();
 const _pos = new Vector3();

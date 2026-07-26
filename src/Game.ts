@@ -230,6 +230,10 @@ export class Game {
     this.#lastFooting.copy(definition.spawn.position);
     this.#player = player;
 
+    // The view model rides the camera, so it must be pulled out of panel shots.
+    this.stage.hideInPanels.length = 0;
+    this.stage.hideInPanels.push(player.viewModel.root);
+
     const effects = new Effects(builder.world);
     this.stage.scene.add(effects.group);
     effects.attachMuzzleTo(player.viewModel.root);
@@ -272,6 +276,14 @@ export class Game {
   }
 
   unload(): void {
+    // The previous player's view model is parented to the shared camera; left
+    // in place it stacks a second gun on top of the new one every reload.
+    if (this.#player) {
+      this.stage.camera.remove(this.#player.viewModel.root);
+      this.#player.viewModel.dispose();
+    }
+    this.stage.hideInPanels.length = 0;
+
     for (const e of this.#enemies) {
       this.stage.scene.remove(e.group);
       e.dispose();

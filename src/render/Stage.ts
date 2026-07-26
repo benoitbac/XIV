@@ -120,6 +120,13 @@ export class Stage {
   /** Objects hidden during the normal pre-pass (sky, view model, sprites). */
   readonly skipNormals: Object3D[] = [];
 
+  /**
+   * Objects hidden while rendering an inset panel. The view model lives on the
+   * camera, which is in the scene, so a panel shot from a second camera would
+   * otherwise catch the player's own gun floating in mid-air.
+   */
+  readonly hideInPanels: Object3D[] = [];
+
   readonly #sunDirection = new Vector3().copy(DEFAULT_SKY.sunDirection).normalize();
 
   /**
@@ -163,6 +170,10 @@ export class Stage {
     this.renderer.shadowMap.autoUpdate = false;
 
     this.camera = new PerspectiveCamera(72, 1, 0.08, 400);
+    // The camera has to be part of the scene graph, not merely passed to
+    // render(): anything parented to it — the whole first-person view model —
+    // is otherwise skipped entirely and never drawn.
+    this.scene.add(this.camera);
 
     this.#skyMaterial = new ShaderMaterial({
       vertexShader: SKY_VERT,
@@ -342,6 +353,7 @@ export class Stage {
 
     this.#sky.position.copy(camera.position);
     this.renderer.shadowMap.needsUpdate = true;
+    for (const o of this.hideInPanels) o.visible = false;
 
     this.renderer.setRenderTarget(snap.color);
     this.renderer.clear();
@@ -364,6 +376,8 @@ export class Stage {
 
     const pixels = new Uint8Array(width * height * 4);
     this.renderer.readRenderTargetPixels(snap.out, 0, 0, width, height, pixels);
+
+    for (const o of this.hideInPanels) o.visible = true;
 
     // Restore the live pipeline before anything else draws.
     this.comic.setInputs(this.#colorRT.texture, this.#normalRT.texture, this.#depth);

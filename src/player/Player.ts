@@ -479,9 +479,12 @@ export class Player {
     this.onNoise.emit({ position: this.position.clone(), radius: def.noiseRadius });
 
     if (def.ejectsShell) {
+      // Casings leave the actual ejection port on the weapon model, not a
+      // guessed point off the player's shoulder.
+      const port = this.viewModel.root.localToWorld(this.viewModel.ejectorLocal.clone());
       const right = _right.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
       this.onShellEjected.emit({
-        position: origin.clone().addScaledVector(right, 0.2).addScaledVector(forward, 0.25),
+        position: port,
         direction: right.clone().multiplyScalar(2.2).setY(2.4),
       });
     }
