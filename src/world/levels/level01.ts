@@ -373,9 +373,12 @@ export const LEVEL_01: LevelDefinition = {
     // Heights are given as (low end at -Z, high end at +Z): the player descends
     // from the crash bowl at +Z down to the station in the valley at -Z.
     b.box(0, 10, 42, 30, 4, 24, 'snow', SNOW, { tile: 3.2 }); // crash bowl, y = 14
-    b.slope(0, 24, 16, 12, 8, 14, 12, 'snow', SNOW);
+    // Many shallow treads, not few deep ones: at a dozen steps a hillside reads
+    // as a monumental staircase. Under ~20 cm of rise the ink pass turns the
+    // step edges into fine hatching, which is exactly what a drawn slope wants.
+    b.slope(0, 24, 16, 12, 8, 14, 34, 'snow', SNOW);
     b.box(0, 4, 8, 38, 4, 24, 'snow', SNOW, { tile: 3.2 }); // tree line, y = 8
-    b.slope(0, -3, 18, 10, 4, 8, 10, 'snow', SNOW);
+    b.slope(0, -3, 18, 10, 4, 8, 26, 'snow', SNOW);
     b.box(0, 0, -34, 56, 4, 56, 'snow', SNOW, { tile: 3.2 }); // valley floor, y = 4
 
     // Valley walls. The visible rock is decorative geometry with real internal

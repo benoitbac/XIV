@@ -1,9 +1,12 @@
-import { Box3, BoxGeometry, Group, Mesh, MeshToonMaterial, Vector3 } from 'three';
+import { Box3, Group, Mesh, Vector3 } from 'three';
 import { Signal } from '../core/signal.ts';
 import { angleDelta, clamp, damp, randRange } from '../core/mathx.ts';
 import { moveBody, type BrushWorld, type Surface } from '../world/Collision.ts';
 import { PALETTE } from '../render/palette.ts';
-import { toon } from '../render/toon.ts';
+import { Animator } from '../anim/Animator.ts';
+import { CLIPS, CLIP_FIRE_ADD, CLIP_HIT_ADD } from '../anim/clips.ts';
+import { buildHumanoid } from '../anim/humanoid.ts';
+import { worldBoxFromPart, type Rig } from '../anim/rig.ts';
 
 export type EnemyState = 'idle' | 'patrol' | 'suspicious' | 'combat' | 'search' | 'dead';
 
@@ -120,11 +123,19 @@ const HEIGHT = 1.78;
 interface Part {
   mesh: Mesh;
   kind: BodyPart;
-  /** Half-extents, local. */
+  /** Half-extents in the part's own local space. */
   half: Vector3;
-  /** Offset from the enemy's feet, before yaw rotation. */
-  offset: Vector3;
   worldBox: Box3;
+}
+
+/**
+ * Which joint a mesh hangs off decides what it counts as when a bullet finds
+ * it. Anything not listed is a limb — the cheapest place to be hit.
+ */
+function partKindForJoint(jointName: string): BodyPart {
+  if (jointName === 'head' || jointName === 'neck') return 'head';
+  if (jointName === 'chest' || jointName === 'spine' || jointName === 'pelvis') return 'torso';
+  return 'limb';
 }
 
 /**
@@ -162,7 +173,7 @@ export class Enemy {
   #strafe = 1;
   #strafeTimer = 0;
   #stepAccumulator = 0;
-  #walkPhase = 0;
+  #reloadTimer = 0;
   #deathTimer = 0;
   #hitFlash = 0;
   #groundSurface: Surface | null = null;
@@ -171,7 +182,8 @@ export class Enemy {
 
   readonly #parts: Part[] = [];
   readonly #world: BrushWorld;
-  readonly #materials: MeshToonMaterial[] = [];
+  #rig: Rig | null = null;
+  #animator: Animator | null = null;
 
   constructor(world: BrushWorld, archetype: EnemyArchetype) {
     this.#world = world;
@@ -180,133 +192,43 @@ export class Enemy {
     this.#build();
   }
 
-  #addPart(
-    kind: BodyPart,
-    w: number,
-    h: number,
-    d: number,
-    x: number,
-    y: number,
-    z: number,
-    material: MeshToonMaterial,
-    name?: string,
-  ): Part {
-    const mesh = new Mesh(new BoxGeometry(w, h, d), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    if (name) mesh.name = name;
-    this.group.add(mesh);
-    const part: Part = {
-      mesh,
-      kind,
-      half: new Vector3(w / 2, h / 2, d / 2),
-      offset: new Vector3(x, y, z),
-      worldBox: new Box3(),
-    };
-    this.#parts.push(part);
-    return part;
-  }
-
-  /** Non-colliding trim: belts, straps, pockets. Detail for the ink pass only. */
-  #trim(
-    w: number,
-    h: number,
-    d: number,
-    x: number,
-    y: number,
-    z: number,
-    material: MeshToonMaterial,
-  ): Mesh {
-    const mesh = new Mesh(new BoxGeometry(w, h, d), material);
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    this.group.add(mesh);
-    return mesh;
-  }
-
   /**
-   * A guard, drawn rather than blocked out. The proportions matter more than
-   * the polygon count: a small head, wide shoulders, a coat that flares below
-   * the belt and a rifle carried across the chest are what make a stack of
-   * boxes read as a man at forty metres.
+   * A guard, built on a real joint hierarchy so the animation system can drive
+   * it. Hit boxes are read back from the animated joints every frame, so
+   * shooting where a limb *looks* like it is actually hits it.
    */
   #build(): void {
     const a = this.archetype;
-    const jacket = toon(a.jacket, { ramp: 'trio' });
-    const jacketDark = toon(shade(a.jacket, 0.72), { ramp: 'trio' });
-    const trousers = toon(a.trousers, { ramp: 'trio' });
-    const skin = toon(0xc98f5f, { ramp: 'trio' });
-    const accent = toon(a.accent, { ramp: 'trio' });
-    const leather = toon(0x2a2018, { ramp: 'trio' });
-    const gunMat = toon(0x23272d, { ramp: 'trio' });
-    const woodMat = toon(0x4a3423, { ramp: 'trio' });
-    this.#materials.push(jacket, jacketDark, trousers, skin, accent, leather, gunMat, woodMat);
-
-    // Legs first, so the coat overlaps them.
-    this.#addPart('limb', 0.17, 0.78, 0.19, -0.115, 0.42, 0, trousers, 'legL');
-    this.#addPart('limb', 0.17, 0.78, 0.19, 0.115, 0.42, 0, trousers, 'legR');
-    this.#trim(0.2, 0.16, 0.28, -0.115, 0.08, 0.03, leather);
-    this.#trim(0.2, 0.16, 0.28, 0.115, 0.08, 0.03, leather);
-
-    // Torso: chest box plus a narrower waist, then the coat skirt.
-    this.#addPart('torso', 0.46, 0.44, 0.26, 0, 1.24, 0, jacket);
-    this.#addPart('torso', 0.4, 0.22, 0.23, 0, 0.94, 0, jacket);
-    this.#trim(0.44, 0.34, 0.27, 0, 0.72, 0, jacketDark); // coat skirt
-    this.#trim(0.42, 0.07, 0.28, 0, 0.9, 0, leather); // belt
-    this.#trim(0.09, 0.09, 0.05, 0, 0.9, 0.15, accent); // buckle
-
-    // Shoulders are a separate, wider block — this is the silhouette cue that
-    // separates a soldier from a civilian at distance.
-    this.#trim(0.62, 0.14, 0.3, 0, 1.44, 0, jacket);
-    this.#addPart('torso', 0.34, 0.1, 0.26, 0, 1.53, 0, accent); // collar
-
-    // Head: deliberately small. A head-sized head makes everything look like a toy.
-    this.#addPart('head', 0.21, 0.24, 0.22, 0, 1.66, 0, skin, 'head');
-    this.#trim(0.13, 0.09, 0.02, 0, 1.66, -0.115, jacketDark); // brow shadow / features
-    if (a.helmet) {
-      this.#addPart('head', 0.26, 0.12, 0.27, 0, 1.79, 0, jacketDark);
-      this.#trim(0.28, 0.04, 0.1, 0, 1.74, -0.13, jacketDark); // peak
-      this.#trim(0.05, 0.05, 0.02, 0.09, 0.9, 0.15, accent);
-    } else {
-      this.#trim(0.23, 0.07, 0.24, 0, 1.79, 0, jacketDark); // knitted cap
-      this.#trim(0.24, 0.05, 0.25, 0, 1.74, 0, accent);
-    }
-
-    // Arms: upper and forearm, angled in toward the weapon.
-    for (const side of [-1, 1] as const) {
-      const tag = side < 0 ? 'L' : 'R';
-      this.#addPart('limb', 0.13, 0.3, 0.15, side * 0.29, 1.29, 0, jacket, `armUpper${tag}`);
-      this.#addPart('limb', 0.115, 0.28, 0.13, side * 0.26, 1.02, -0.13, jacket, `armLower${tag}`);
-      this.#trim(0.1, 0.09, 0.11, side * 0.24, 0.88, -0.2, leather); // glove
-    }
-
-    // Rifle carried across the chest, muzzle to the left.
-    const rifle = new Group();
-    const barrel = new Mesh(new BoxGeometry(0.05, 0.05, 0.66), gunMat);
-    barrel.position.set(0, 0, -0.1);
-    const receiver = new Mesh(new BoxGeometry(0.07, 0.11, 0.3), gunMat);
-    receiver.position.set(0, -0.01, 0.14);
-    const stock = new Mesh(new BoxGeometry(0.06, 0.13, 0.26), woodMat);
-    stock.position.set(0, -0.05, 0.4);
-    const magazine = new Mesh(new BoxGeometry(0.05, 0.18, 0.07), gunMat);
-    magazine.position.set(0, -0.15, 0.16);
-    const sight = new Mesh(new BoxGeometry(0.02, 0.05, 0.02), gunMat);
-    sight.position.set(0, 0.07, -0.36);
-    rifle.add(barrel, receiver, stock, magazine, sight);
-    rifle.position.set(0.16, 1.06, -0.2);
-    rifle.rotation.set(0, -0.35, 0.22);
-    rifle.name = 'rifle';
-    rifle.traverse((o) => {
-      if (o instanceof Mesh) o.castShadow = true;
+    const built = buildHumanoid({
+      palette: {
+        coat: a.jacket,
+        coatDark: shade(a.jacket, 0.66),
+        trousers: a.trousers,
+        accent: a.accent,
+        skin: 0xc98f5f,
+        leather: 0x2a2018,
+        metal: 0x23272d,
+        wood: 0x4a3423,
+      },
+      helmet: a.helmet,
+      greatcoat: a.id === 'sentinel',
+      rifle: true,
     });
-    this.group.add(rifle);
 
-    // Sling: a strap from the shoulder to the weapon.
-    const sling = this.#trim(0.05, 0.5, 0.03, 0.02, 1.22, -0.12, leather);
-    sling.rotation.z = 0.42;
-    sling.rotation.x = -0.25;
+    this.#rig = built.rig;
+    this.group.add(built.rig.root);
 
+    for (const { mesh, half } of built.rig.parts) {
+      this.#parts.push({
+        mesh,
+        half,
+        kind: partKindForJoint(mesh.parent?.name ?? ''),
+        worldBox: new Box3(),
+      });
+    }
+
+    this.#animator = new Animator(built.rig);
+    this.#animator.play(CLIPS.idle, 0);
     this.group.userData.enemy = this;
   }
 
@@ -328,28 +250,14 @@ export class Enemy {
     return this.state === 'combat' || this.state === 'search';
   }
 
+  /**
+   * Hit boxes are taken from the animated joints, not from a static T-pose.
+   * A guard who has just been shoved sideways by a burst should be harder to
+   * hit in the head, and a crouched one should present a smaller torso.
+   */
   #refreshBoxes(): void {
-    const sin = Math.sin(this.yaw);
-    const cos = Math.cos(this.yaw);
-    for (const p of this.#parts) {
-      // Rotate the local offset into world space (yaw only — bodies stay upright).
-      const ox = p.offset.x * cos + p.offset.z * sin;
-      const oz = -p.offset.x * sin + p.offset.z * cos;
-      // Yaw-rotated half extents, expanded conservatively so a turned guard is
-      // never harder to hit than a facing one.
-      const hx = Math.abs(p.half.x * cos) + Math.abs(p.half.z * sin);
-      const hz = Math.abs(p.half.x * sin) + Math.abs(p.half.z * cos);
-      p.worldBox.min.set(
-        this.position.x + ox - hx,
-        this.position.y + p.offset.y - p.half.y,
-        this.position.z + oz - hz,
-      );
-      p.worldBox.max.set(
-        this.position.x + ox + hx,
-        this.position.y + p.offset.y + p.half.y,
-        this.position.z + oz + hz,
-      );
-    }
+    this.group.updateWorldMatrix(false, false);
+    for (const p of this.#parts) worldBoxFromPart(p.mesh, p.half, p.worldBox);
   }
 
   /** Ray/part intersection used by every bullet. Returns the nearest part hit. */
@@ -390,9 +298,15 @@ export class Enemy {
       this.alive = false;
       this.state = 'dead';
       this.#deathTimer = 0;
+      this.#animator?.play(CLIPS.death, 0.08);
+      this.#animator!.timeScale = 1;
+      this.#animator!.aimTarget = 0;
       this.onKilled.emit({ enemy: this, part });
       return true;
     }
+    // Flinch as an additive layer, so a guard who is hit mid-stride keeps
+    // walking rather than snapping back to a neutral pose.
+    this.#animator?.punch(CLIP_HIT_ADD, part === 'head' ? 1 : 0.65);
     return false;
   }
 
@@ -487,7 +401,7 @@ export class Enemy {
     }
 
     this.#integrate(dt);
-    this.#animate(dt);
+    this.#animate(dt, playerEye);
     this.#refreshBoxes();
   }
 
@@ -566,9 +480,16 @@ export class Enemy {
     dir.normalize();
 
     this.onShoot.emit({ origin, direction: dir, damage: a.damage, enemy: this });
+    this.#animator?.punch(CLIP_FIRE_ADD, 1);
 
     this.#burstLeft -= 1;
     this.#shotTimer = this.#burstLeft > 0 ? a.shotGap : a.burstGap;
+    // Between bursts a guard works the bolt or swaps a magazine — it gives the
+    // player a readable window to move, and it stops the aim pose looping dead.
+    if (this.#burstLeft <= 0 && Math.random() < 0.35) {
+      this.#reloadTimer = CLIPS.reload.duration;
+      this.#shotTimer = Math.max(this.#shotTimer, CLIPS.reload.duration);
+    }
   }
 
   #tickSearch(dt: number): void {
@@ -634,43 +555,59 @@ export class Enemy {
     this.group.rotation.y = this.yaw;
   }
 
-  #animate(dt: number): void {
+  /**
+   * Chooses the clip and drives its playback rate from real ground speed, so
+   * the feet keep pace with the body instead of skating.
+   */
+  #animate(dt: number, playerEye: Vector3): void {
+    const animator = this.#animator;
+    if (!animator) return;
+
     const speed = Math.hypot(this.velocity.x, this.velocity.z);
-    this.#walkPhase += dt * (2.4 + speed * 1.9);
-    const swing = Math.min(speed / 3.4, 1) * 0.7;
-    const s = Math.sin(this.#walkPhase);
-
-    const legL = this.group.getObjectByName('legL');
-    const legR = this.group.getObjectByName('legR');
-    if (legL) legL.rotation.x = s * swing;
-    if (legR) legR.rotation.x = -s * swing;
-
-    // Both arms stay on the weapon in combat; out of combat the left one swings
-    // and the rifle drops to a carry angle.
+    const moving = speed > 0.25;
     const fighting = this.state === 'combat';
-    const armSwing = fighting ? 0 : s * swing * 0.5;
-    for (const [name, sign] of [
-      ['armUpperL', -1],
-      ['armLowerL', -1],
-      ['armUpperR', 1],
-      ['armLowerR', 1],
-    ] as const) {
-      const arm = this.group.getObjectByName(name);
-      if (arm) arm.rotation.x = armSwing * sign;
+
+    if (this.#reloadTimer > 0) {
+      this.#reloadTimer -= dt;
+      if (animator.currentName !== 'reload') animator.play(CLIPS.reload, 0.12);
+    } else if (fighting) {
+      animator.play(moving ? CLIPS.combatWalk : CLIPS.aim, 0.18);
+    } else if (moving) {
+      animator.play(speed > 3.2 ? CLIPS.run : CLIPS.walk, 0.22);
+    } else if (this.state === 'suspicious' || this.state === 'search') {
+      animator.play(CLIPS.scan, 0.3);
+    } else {
+      animator.play(CLIPS.idle, 0.35);
     }
 
-    const rifle = this.group.getObjectByName('rifle');
-    if (rifle) {
-      // Raised and levelled when fighting, slung low and canted when not.
-      rifle.rotation.set(fighting ? -0.04 : 0.42, fighting ? -0.06 : -0.35, fighting ? 0.04 : 0.22);
-      rifle.position.set(fighting ? 0.1 : 0.16, fighting ? 1.32 : 1.06, fighting ? -0.28 : -0.2);
+    // Stride length is fixed; cycle rate follows speed. Below a walk the clip
+    // would crawl, so it is clamped rather than allowed to stall.
+    const cycleSpeed =
+      animator.currentName === 'run'
+        ? clamp(speed / 4.2, 0.7, 1.6)
+        : animator.currentName === 'walk' || animator.currentName === 'combat-walk'
+          ? clamp(speed / 1.9, 0.55, 1.7)
+          : 1;
+    animator.timeScale = cycleSpeed;
+
+    // Aim layer: the upper body turns onto the player independently of the legs.
+    animator.aimTarget = fighting ? 1 : 0;
+    if (fighting) {
+      const eye = this.eyePosition;
+      const dx = playerEye.x - eye.x;
+      const dy = playerEye.y - eye.y;
+      const dz = playerEye.z - eye.z;
+      const flat = Math.hypot(dx, dz);
+      animator.aimPitch = -Math.atan2(dy, Math.max(flat, 0.001));
+      animator.aimYaw = angleDelta(this.yaw, Math.atan2(-dx, -dz));
     }
 
-    // Hit flash: the whole figure blanches for a beat, comic-book style.
+    animator.update(dt);
+
+    // Hit flash: the whole figure swells for a beat, comic-book style.
     if (this.#hitFlash > 0) {
       this.#hitFlash = Math.max(0, this.#hitFlash - dt * 5);
-      const k = this.#hitFlash;
-      this.group.scale.setScalar(1 + k * 0.05);
+      this.group.scale.setScalar(1 + this.#hitFlash * 0.045);
     } else if (this.group.scale.x !== 1) {
       this.group.scale.setScalar(1);
     }
@@ -678,12 +615,13 @@ export class Enemy {
 
   #updateDeath(dt: number): void {
     this.#deathTimer += dt;
-    // A quick topple, then the body settles and stays as a marker.
-    const t = Math.min(this.#deathTimer / 0.7, 1);
+    // A collapse, not a topple: the knees give first and the torso folds. The
+    // clip does the folding; the group only sinks and settles.
+    this.#animator?.update(dt);
+    const t = Math.min(this.#deathTimer / 1.15, 1);
     const eased = t * t * (3 - 2 * t);
-    this.group.rotation.x = eased * (Math.PI / 2) * 0.92;
-    this.group.position.y = this.position.y + Math.sin(eased * Math.PI) * 0.12;
-    if (this.#deathTimer < 0.7) {
+    this.group.position.y = this.position.y - eased * 0.18;
+    if (this.#deathTimer < 1.15) {
       this.velocity.y -= 21 * dt;
       moveBody(this.#world, this.position, this.velocity, { radius: RADIUS, height: 0.4 }, dt);
       this.group.position.x = this.position.x;
@@ -692,7 +630,10 @@ export class Enemy {
   }
 
   dispose(): void {
-    for (const p of this.#parts) p.mesh.geometry.dispose();
+    this.#rig?.dispose();
+    this.#rig = null;
+    this.#animator = null;
+    this.#parts.length = 0;
     this.group.clear();
   }
 }
