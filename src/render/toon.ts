@@ -5,9 +5,25 @@ import {
   RedFormat,
   Texture,
   UnsignedByteType,
+  Vector2,
 } from 'three';
 import { color } from './palette.ts';
-import { surfaceTexture, type SurfaceTexture } from './textures.ts';
+import { surfaceMaterial, type SurfaceTexture } from './textures.ts';
+
+/**
+ * How hard each surface's normal map bites. Snow wants a whisper; rock and
+ * cladding want to be felt. Too much and the toon ramp breaks into noise.
+ */
+const NORMAL_STRENGTH: Record<SurfaceTexture, number> = {
+  snow: 0.35,
+  plank: 0.85,
+  planed: 0.6,
+  concrete: 0.7,
+  metal: 0.8,
+  rock: 1.1,
+  shingle: 0.9,
+  canvas: 0.5,
+};
 
 /**
  * A gradient map turns Lambert lighting into hard steps — the single most
@@ -79,8 +95,22 @@ export function toon(hex: number, options: ToonOptions = {}): MeshToonMaterial {
     color: color(hex),
     gradientMap: RAMPS[ramp],
   });
-  if (options.texture) mat.map = surfaceTexture(options.texture);
-  else if (options.map) mat.map = options.map;
+
+  if (options.texture) {
+    const material = surfaceMaterial(options.texture);
+    mat.map = material.map;
+    // The normal map is doing two jobs: it breaks the flat toon step across a
+    // surface, and — because the ink pass runs its Sobel over the normal
+    // buffer — it also puts fine drawn lines into seams, rivets and rock
+    // facets. Turn it off and the surfaces go back to reading as cards.
+    mat.normalMap = material.normalMap;
+    mat.normalScale = new Vector2(
+      NORMAL_STRENGTH[options.texture],
+      NORMAL_STRENGTH[options.texture],
+    );
+  } else if (options.map) {
+    mat.map = options.map;
+  }
 
   if (options.transparent) {
     mat.transparent = true;

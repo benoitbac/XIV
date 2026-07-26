@@ -2,6 +2,7 @@ import './styles/game.css';
 import { Game } from './Game.ts';
 import { Menus } from './ui/Menus.ts';
 import { audio } from './core/Audio.ts';
+import { warmMaterials } from './render/textures.ts';
 
 const canvas = document.getElementById('viewport') as HTMLCanvasElement | null;
 const overlay = document.getElementById('overlay');
@@ -41,6 +42,10 @@ if (!canvas.getContext('webgl2')) {
   game.loop.start();
   game.setState('title');
   boot?.remove();
+
+  // Bake the procedural materials behind the title screen, so pressing Start
+  // doesn't stall on a couple of seconds of texture synthesis.
+  warmMaterials();
 
   // Handy for poking at the running game from the console.
   Object.assign(window, { xiv: game });

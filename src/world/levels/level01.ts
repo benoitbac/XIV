@@ -88,19 +88,22 @@ function roof(
       toon(PLANK_DARK, { ramp: 'duo', texture: 'shingle' }),
     );
     scaleBoxUVs(slab.geometry as BoxGeometry, w, 0.18, half, 1.1);
-    slab.position.set(x, y + rise / 2, z + (side * half) / 2);
-    slab.rotation.x = side * -Math.atan2(rise, half);
-    b.decor(slab, slab.position.x, slab.position.y, slab.position.z);
-    slab.rotation.x = side * -Math.atan2(rise, half);
+    // A positive rotation.x tips a slab's +Z edge downward, so the pan sitting
+    // on the +Z side needs a positive angle and the one on -Z a negative one.
+    // With the sign the other way round the two pans meet in a valley instead
+    // of a ridge — and it still reads as a roof from dead in front, which is
+    // how it survived being looked at.
+    const pitch = side * Math.atan2(rise, half);
+
+    b.decor(slab, x, y + rise / 2, z + (side * half) / 2);
+    slab.rotation.x = pitch;
 
     const snowCap = new Mesh(
-      new BoxGeometry(w * 0.97, 0.11, half * 0.9),
+      new BoxGeometry(w * 0.97, 0.11, half * 0.92),
       toon(SNOW, { ramp: 'snow', texture: 'snow' }),
     );
-    snowCap.position.copy(slab.position).setY(slab.position.y + 0.14);
-    snowCap.rotation.x = slab.rotation.x;
-    b.decor(snowCap, snowCap.position.x, snowCap.position.y, snowCap.position.z);
-    snowCap.rotation.x = slab.rotation.x;
+    b.decor(snowCap, x, y + rise / 2 + 0.14, z + (side * half) / 2);
+    snowCap.rotation.x = pitch;
   }
 
   // Ridge beam.
