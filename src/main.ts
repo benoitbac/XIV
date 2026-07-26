@@ -25,9 +25,13 @@ if (!canvas.getContext('webgl2')) {
   const game = new Game(canvas, overlay);
   new Menus(game, overlay);
 
-  // The audio context can only start from a gesture; the first click is it.
+  // The audio context can only start from a gesture. The listener stays put
+  // until the context is genuinely running: a first gesture the browser doesn't
+  // consider trusted leaves it created but suspended, and unsubscribing there
+  // means nothing ever starts the sound again.
   const unlock = (): void => {
     audio.unlock();
+    if (!audio.ready) return;
     window.removeEventListener('pointerdown', unlock);
     window.removeEventListener('keydown', unlock);
   };

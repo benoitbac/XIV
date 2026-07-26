@@ -3,6 +3,7 @@ import { Stage } from './render/Stage.ts';
 import { Input } from './core/Input.ts';
 import { Loop } from './core/Loop.ts';
 import { audio } from './core/Audio.ts';
+import { music } from './core/Music.ts';
 import { Signal } from './core/signal.ts';
 import { clamp, pick, randRange } from './core/mathx.ts';
 import { Player } from './player/Player.ts';
@@ -101,6 +102,8 @@ export class Game {
   #powerOn = false;
   #hitFeedbackTimer = 0;
   #panelCooldown = 0;
+  /** While positive, the score stays on the flashback bed. */
+  #memoryMusicTimer = 0;
 
   readonly #canvas: HTMLCanvasElement;
   readonly #overlayRoot: HTMLElement;
@@ -192,10 +195,16 @@ export class Game {
       if (!this.input.locked) this.input.requestLock();
       this.hud.setVisible(true);
       audio.setWind(this.#definition.windIntensity);
+      this.#syncMusic();
     } else {
       this.input.releaseAll();
       if (state !== 'paused') this.hud.setVisible(false);
       if (state === 'title') audio.stopWind();
+      // Death and the end of a chapter both want the drums gone immediately.
+      music.setState(
+        state === 'title' || state === 'complete' ? 'title' : state === 'dead' ? 'memory' : 'calm',
+        state === 'dead' ? 0.4 : 1.6,
+      );
     }
     this.onStateChange.emit(state);
   }
@@ -650,6 +659,8 @@ export class Game {
     this.#memories.add(id);
     this.#stats.memories = this.#memories.size;
     audio.play('flashback');
+    this.#memoryMusicTimer = memory.lines.length * 3.6;
+    this.#syncMusic();
     this.hud.toast(`Souvenir ${memory.plate} — ${memory.title}`, 'memory');
     this.onCodexEntry.emit({ kind: 'memory', id });
 
@@ -694,6 +705,22 @@ export class Game {
     this.#alert = level;
     this.#alertCooldown = 8;
     this.hud.setAlert(level);
+    this.#syncMusic();
+  }
+
+  /**
+   * The score follows the alert state, with one exception: a memory takes over
+   * completely. A flashback playing over combat drums would undercut both.
+   */
+  #syncMusic(): void {
+    if (this.#state !== 'playing') return;
+    if (this.#memoryMusicTimer > 0) {
+      music.setState('memory');
+      return;
+    }
+    music.setState(
+      this.#alert === 'hunting' ? 'combat' : this.#alert === 'suspicious' ? 'suspicious' : 'calm',
+    );
   }
 
   // -------------------------------------------------------------------------
@@ -906,9 +933,15 @@ export class Game {
           if (!stillAware) {
             this.#alert = 'calm';
             this.hud.setAlert('calm');
+            this.#syncMusic();
           } else {
             this.#alertCooldown = 3;
           }
+        }
+
+        if (this.#memoryMusicTimer > 0) {
+          this.#memoryMusicTimer -= dt;
+          if (this.#memoryMusicTimer <= 0) this.#syncMusic();
         }
 
         this.#hitFeedbackTimer = Math.max(0, this.#hitFeedbackTimer - dt);

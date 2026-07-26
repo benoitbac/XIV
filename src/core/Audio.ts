@@ -1,5 +1,6 @@
 import type { Vector3 } from 'three';
 import { clamp, randRange } from './mathx.ts';
+import { music } from './Music.ts';
 
 /**
  * Every sound in XIV is synthesised at runtime — there is not a single audio
@@ -84,6 +85,10 @@ export class AudioBus {
     const data = buffer.getChannelData(0);
     for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
     this.#noise = buffer;
+
+    // The score shares this context and rides the music bus, so one volume
+    // slider and one mute control both.
+    music.attach(ctx, this.#musicGain);
   }
 
   get ready(): boolean {
