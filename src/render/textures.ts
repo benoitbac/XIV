@@ -64,8 +64,10 @@ function snowSurface(): Surface {
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       const i = y * SIZE + x;
-      const ripple = Math.sin((x / SIZE) * Math.PI * 14 + coarse[i]! * 9) * 0.5 + 0.5;
-      height[i] = coarse[i]! * 0.6 + fine[i]! * 0.22 + ripple * 0.18;
+      // Sastrugi, kept faint and strongly warped by the drift noise. A clean
+      // sine here prints as corduroy stripes across the whole snowfield.
+      const ripple = Math.sin((x / SIZE) * Math.PI * 22 + coarse[i]! * 26) * 0.5 + 0.5;
+      height[i] = coarse[i]! * 0.74 + fine[i]! * 0.2 + ripple * 0.06;
       // Snow is near-white; the variation belongs almost entirely in the relief.
       tint[i] = 0.93 + fine[i]! * 0.07;
     }

@@ -9,26 +9,26 @@ export const PALETTE = {
   ink: 0x141210,
   paper: 0xf2ece1,
 
-  // Albedos are deliberately mid-tone. The key light and the toon ramp supply
-  // the brightness; starting from near-white leaves the ramp nowhere to go and
-  // every lit surface clips to the same flat white.
-  snow: 0xc2d2e0,
-  snowShadow: 0x8fa3b8,
-  sky: 0x6d94b8,
+  // Album colour: saturated flats, printed bright. The ramp floors are high
+  // enough that the shaded band keeps its hue, so albedos can be strong
+  // without the lit side blowing out.
+  snow: 0xe8f0f7,
+  snowShadow: 0xa8bfd6,
+  sky: 0x4f8fc4,
   skyNight: 0x2b3a52,
 
-  steel: 0x4e5763,
-  steelDark: 0x333a43,
-  rust: 0x7a4529,
-  wood: 0x5d4029,
-  woodDark: 0x3e2b1c,
-  concrete: 0x827a70,
+  steel: 0x6b7686,
+  steelDark: 0x3f4753,
+  rust: 0xa85a2c,
+  wood: 0x8a5a30,
+  woodDark: 0x5a3a1e,
+  concrete: 0xa79c8c,
 
-  blood: 0xc4322a,
-  alert: 0xd94a3d,
-  onomatopoeia: 0xe9bb3c,
-  hostile: 0x8a3b34,
-  ally: 0x3f7fa6,
+  blood: 0xd8332a,
+  alert: 0xe8493a,
+  onomatopoeia: 0xf5c02e,
+  hostile: 0xb03a2e,
+  ally: 0x3f8fc4,
 
   hudInk: 0x1a1714,
   hudPaper: 0xece3d2,

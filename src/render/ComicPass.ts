@@ -142,16 +142,21 @@ void main() {
   float screen = 1.0 - smoothstep(0.22, 0.46, dots) * shade * uHalftone;
   base *= mix(1.0, screen, uHalftone);
 
-  vec3 outColor = mix(base, uInk, max(edge, shadeEdge));
-
-  // Paper: a fixed fibre grain plus a per-step speckle.
+  // Paper: a fixed fibre grain plus a per-step speckle. Applied to the fills
+  // only — the ink goes on afterwards.
   float fibre = hash21(vUv * uResolution * 0.5);
   float speck = hash21(vUv * uResolution + uTimeStep * 3.1);
-  outColor *= 1.0 - (fibre * 0.5 + speck * 0.5) * uGrain;
-  outColor = mix(outColor, uPaper, fibre * uGrain * 0.25);
+  base *= 1.0 - (fibre * 0.5 + speck * 0.5) * uGrain;
+  base = mix(base, uPaper, fibre * uGrain * 0.25);
 
   float v = distance(vUv, vec2(0.5));
-  outColor *= 1.0 - smoothstep(0.42, 0.86, v) * uVignette;
+  base *= 1.0 - smoothstep(0.42, 0.86, v) * uVignette;
+
+  // Ink last, and undiluted. Laying grain and vignette over the line is what
+  // turns a confident black contour into a grey smudge that vanishes against
+  // dark fills — the single biggest reason a cel-shaded frame reads as a
+  // filter rather than as drawing.
+  vec3 outColor = mix(base, uInk, max(edge, shadeEdge));
 
   gl_FragColor = vec4(outColor, 1.0);
 
@@ -271,7 +276,10 @@ export class ComicPass {
    * black smear at 50 % render scale.
    */
   #applyThickness(height: number): void {
-    this.material.uniforms.uThickness!.value = this.#thickness * (height / 1080);
+    // Scaled for the buffer, but never allowed below ~1.6 texels: a contour
+    // thinner than that breaks up into dashes and stops reading as a line at
+    // all, which is exactly what happens on a short or half-scale viewport.
+    this.material.uniforms.uThickness!.value = Math.max(1.6, this.#thickness * (height / 1080));
   }
 
   setSize(width: number, height: number): void {

@@ -42,19 +42,27 @@ function gradientMap(steps: readonly number[]): DataTexture {
   return tex;
 }
 
-/** Flat: one tone, for small props that should sit back in the plate. */
-export const RAMP_FLAT = /* @__PURE__ */ gradientMap([0.86]);
-/** Two-tone: hard light/shade break. Architecture, crates, metalwork. */
-export const RAMP_DUO = /* @__PURE__ */ gradientMap([0.36, 1.0]);
-/** Three-tone: characters and anything curved, so volume survives motion. */
-export const RAMP_TRIO = /* @__PURE__ */ gradientMap([0.26, 0.58, 1.0]);
 /**
- * Snow: bright everywhere, but with two cool steps so drifts still show form.
- * A duo ramp on snow makes the shaded side read as grey mud.
+ * Ramp floors are deliberately high.
+ *
+ * A printed album does not render shadow by going towards black — it prints a
+ * second, darker *colour*. So the shaded band keeps most of the albedo (and
+ * therefore its hue), and the separation is carried by the hard step and by
+ * the ink line, not by the drop in brightness. Push these floors down towards
+ * 0.2 and every shaded surface turns into grey mud, which is what makes a
+ * cel-shaded scene look murky instead of graphic.
  */
-export const RAMP_SNOW = /* @__PURE__ */ gradientMap([0.6, 0.8, 1.0]);
-/** Sky-facing foliage: dark base so pines read as silhouettes against snow. */
-export const RAMP_FOLIAGE = /* @__PURE__ */ gradientMap([0.2, 0.52, 0.9]);
+
+/** Flat: one tone, for small props that should sit back in the plate. */
+export const RAMP_FLAT = /* @__PURE__ */ gradientMap([0.92]);
+/** Two-tone: hard light/shade break. Architecture, crates, metalwork. */
+export const RAMP_DUO = /* @__PURE__ */ gradientMap([0.62, 1.0]);
+/** Three-tone: characters and anything curved, so volume survives motion. */
+export const RAMP_TRIO = /* @__PURE__ */ gradientMap([0.55, 0.78, 1.0]);
+/** Snow: bright everywhere, with two cool steps so drifts still show form. */
+export const RAMP_SNOW = /* @__PURE__ */ gradientMap([0.76, 0.9, 1.0]);
+/** Foliage: darker base so pines read as silhouettes against snow. */
+export const RAMP_FOLIAGE = /* @__PURE__ */ gradientMap([0.48, 0.72, 1.0]);
 
 export type RampName = 'flat' | 'duo' | 'trio' | 'snow' | 'foliage';
 

@@ -353,17 +353,18 @@ export const LEVEL_01: LevelDefinition = {
   subtitle: 'Cascades — Cold Fork',
   windIntensity: 0.75,
   sky: {
-    // Late afternoon, sun low over the ridge to the west: long shadows across
-    // the snow, and a sky dark enough at the zenith to give the horizon a line.
-    top: 0x5d84ab,
-    bottom: 0xcfdce8,
+    // Bright winter afternoon. The sun is high enough that surfaces reach full
+    // albedo, which is what lets the flats read as printed colour rather than
+    // as a muddy dusk — but still off-axis enough to throw long shadows.
+    top: 0x3d8ac4,
+    bottom: 0xe4eef7,
     bands: 6,
-    fogColor: 0xa9bccf,
-    fogNear: 45,
-    fogFar: 200,
-    sunDirection: new Vector3(-0.66, 0.46, 0.38),
-    sunIntensity: 1.4,
-    ambientIntensity: 0.15,
+    fogColor: 0xd2e2ef,
+    fogNear: 70,
+    fogFar: 240,
+    sunDirection: new Vector3(-0.55, 0.72, 0.42),
+    sunIntensity: 1.55,
+    ambientIntensity: 0.3,
   },
   // Facing the tear in the shell, downhill — the first thing you see is the way out.
   spawn: { position: new Vector3(0, 14.2, 46.2), yaw: 0 },

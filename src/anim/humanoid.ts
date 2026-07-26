@@ -102,7 +102,30 @@ export function buildHumanoid(options: HumanoidOptions): { rig: Rig; rifle: Grou
 
   // --- head ----------------------------------------------------------------
   rig.attach('head', box(0.2, 0.23, 0.21, skin), [0, 0.1, 0]);
-  rig.attach('head', box(0.14, 0.05, 0.02, coatDark), [0, 0.13, -0.11], { hitbox: false });
+
+  // A face. Four marks are enough at this scale — brow, two eyes, a jaw line —
+  // because the ink pass draws the edges of each and the eye reads them as
+  // features. Without them a guard is a box with a hat, and no amount of
+  // animation fixes that.
+  const ink = toon(0x1a1512, { ramp: 'flat' });
+  rig.attach('head', box(0.16, 0.022, 0.02, ink), [0, 0.145, -0.104], { hitbox: false }); // brow
+  for (const side of [-1, 1]) {
+    rig.attach('head', box(0.032, 0.026, 0.018, ink), [side * 0.042, 0.112, -0.103], {
+      hitbox: false,
+    });
+    // A catchlight inside each eye: one bright pixel is what makes it look
+    // alive rather than drilled.
+    rig.attach(
+      'head',
+      box(0.012, 0.012, 0.012, toon(0xf2ece1, { ramp: 'flat' })),
+      [side * 0.048, 0.116, -0.106],
+      { hitbox: false },
+    );
+  }
+  // Nose, and a shaded jaw that gives the head a chin from the side.
+  rig.attach('head', box(0.026, 0.04, 0.03, skin), [0, 0.09, -0.108], { hitbox: false });
+  rig.attach('head', box(0.13, 0.028, 0.018, ink), [0, 0.045, -0.098], { hitbox: false }); // mouth
+  rig.attach('head', box(0.17, 0.06, 0.16, coatDark), [0, 0.015, 0.005], { hitbox: false }); // jaw shadow
   if (options.helmet) {
     rig.attach('head', limb(0.26, 0.25, 0.13, 0.26, coatDark), [0, 0.24, 0], { hitbox: false });
     rig.attach('head', box(0.27, 0.03, 0.09, coatDark), [0, 0.19, -0.13], { hitbox: false });

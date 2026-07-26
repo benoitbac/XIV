@@ -215,9 +215,10 @@ export class Stage {
 
     // Sky fill only — cool from above, bounced warm from the snow. Kept low:
     // this is the light that destroys the toon ramp if you let it grow.
-    // Enough sky fill that shaded rock keeps its texture instead of going to a
-    // black mass, but not so much that the toon ramp loses its second step.
-    this.hemi = new HemisphereLight(0x8fb4d8, 0xa8927a, 0.42);
+    // Sky fill is strongly blue and warm off the snow. Shadows should read as
+    // *cold blue*, not as an absence of light — that colour in the shade is
+    // half of what makes an album page look printed.
+    this.hemi = new HemisphereLight(0x86b8e8, 0xd8c49c, 0.62);
     this.ambient = new AmbientLight(0xffffff, DEFAULT_SKY.ambientIntensity);
     this.scene.add(this.hemi, this.ambient);
 
